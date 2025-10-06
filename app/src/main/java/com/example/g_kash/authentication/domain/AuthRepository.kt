@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.Flow
 
 // Repository interface
 interface AuthRepository {
+    fun getAuthTokenStream(): Flow<String?>
+
     suspend fun createAccount(
         name: String,
         phoneNumber: String,
@@ -24,10 +26,7 @@ interface AuthRepository {
         pin: String
     ): Result<LoginResponse>
 
-    suspend fun saveAuthToken(token: String)
-    suspend fun getAuthToken(): String?
-    suspend fun clearAuthData()
-    fun getAuthState(): Flow<AuthState>
+    suspend fun logout()
 }
 
 // Use cases

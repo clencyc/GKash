@@ -12,6 +12,7 @@ import com.example.g_kash.authentication.domain.CreatePinUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -226,10 +227,20 @@ class AuthViewModel(
     // --- CORRECTED authState ---
     private val _authState = MutableStateFlow<AuthState>(AuthState(isAuthenticated = false, user = null))
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
-    init {
-        // Load initial auth state when the ViewModel is created
-        loadAuthState()
-    }
+
+    val uiAuthState: StateFlow<UiAuthState> = authRepository.getAuthTokenStream()
+        .map { token ->
+            if (token != null) {
+                UiAuthState.Authenticated
+            } else {
+                UiAuthState.Unauthenticated
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = UiAuthState.Unknown
+        )
 
     private fun loadAuthState() {
         viewModelScope.launch {
@@ -237,25 +248,12 @@ class AuthViewModel(
             authRepository.getAuthState().collect { repoState ->
                 _authState.value = repoState // Update _authState when repository emits
             }
-
-            // OPTION 2: If authRepository.getAuthState() is just logic to CHECK a session
-            // (e.g., returns Boolean and fetches user on success), you'd do this:
-            /*
-            val user = authRepository.fetchUserSession() // Example function
-            if (user != null) {
-                _authState.value = AuthState(isAuthenticated = true, user = user)
-            } else {
-                _authState.value = AuthState(isAuthenticated = false, user = null)
-            }
-            */
         }
     }
 
     fun logout() {
         viewModelScope.launch {
-            authRepository.clearAuthData() // This should ideally update the authState in the repository's flow
-            // If clearing auth data doesn't automatically update the flow, you might need:
-            // _authState.value = AuthState(isAuthenticated = false, user = null)
+            authRepository.logout()
         }
     }
 }

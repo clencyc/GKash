@@ -40,6 +40,8 @@ android {
 }
 
 dependencies {
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
+
 
     // koin & DI
     implementation(libs.koin.core)

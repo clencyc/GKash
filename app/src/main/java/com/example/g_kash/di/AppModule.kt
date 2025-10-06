@@ -1,65 +1,52 @@
 package com.example.g_kash.di
 
-import android.content.SharedPreferences
+import android.content.Context
 import android.util.Log
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.g_kash.accounts.data.AccountsApiService
-import com.example.g_kash.accounts.domain.AccountsRepository
-import com.example.g_kash.accounts.domain.AccountsRepositoryImpl
-import com.example.g_kash.accounts.presentation.AccountsViewModel
 import com.example.g_kash.authentication.data.ApiService
 import com.example.g_kash.authentication.data.ApiServiceImpl
-import com.example.g_kash.authentication.data.AuthRepositoryImpl
-import com.example.g_kash.authentication.domain.AuthRepository
-import com.example.g_kash.authentication.presentation.AuthViewModel
-import com.example.g_kash.authentication.presentation.ConfirmPinViewModel
-import com.example.g_kash.authentication.presentation.CreateAccountViewModel
-import com.example.g_kash.authentication.presentation.CreatePinViewModel
 import io.ktor.client.*
+import com.example.g_kash.data.SessionStorage
+import com.example.g_kash.authentication.domain.AuthRepository
+import com.example.g_kash.authentication.data.AuthRepositoryImpl
+import com.example.g_kash.authentication.domain.CreateAccountUseCase
+import com.example.g_kash.authentication.domain.CreatePinUseCase
+import com.example.g_kash.authentication.domain.LoginUseCase
 import io.ktor.client.engine.android.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.auth.*
+import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
-import org.koin.core.module.Module
-import org.koin.core.module.dsl.viewModel
-import io.ktor.client.plugins.auth.Auth
-import io.ktor.client.plugins.auth.providers.BearerTokens
-import io.ktor.client.plugins.auth.providers.bearer
+
 private const val API_BASE_URL = "https://gkash.onrender.com/api"
-private const val AUTH_TOKEN_PREFS_KEY = "auth_token"
-val networkModule: Module = module {
-    // Provide SharedPreferences for token retrieval
-    single<SharedPreferences> {
-        androidContext().getSharedPreferences("g_kash_prefs", android.content.Context.MODE_PRIVATE)
-    }
 
-    // Provide a way to get the token (synchronously for HttpClient config)
-    single<TokenProvider> {
-        object : TokenProvider {
-            override fun getToken(): String? {
-                val token = get<SharedPreferences>().getString(AUTH_TOKEN_PREFS_KEY, null)
-                if (token != null) {
-                    Log.d("AuthFlow", "TokenProvider retrieved token from SharedPreferences: ${token.take(4)}...")
+val networkModule = module {
 
-                } else {
-                    Log.d("AuthFlow", "TokenProvider: No token found in sharedPreferences.")
-                }
-                // Retrieve token from SharedPreferences
-                return token
-            }
-        }
+    single {
+        // Provide SessionStorage from the androidContext
+        SessionStorage(androidContext())
     }
 
     single<HttpClient> {
-        HttpClient(Android.create()) {
+        val sessionStorage = get<SessionStorage>()
+
+        HttpClient(Android) {
+            expectSuccess = true // Will throw exceptions for non-2xx responses
+
+            defaultRequest {
+                url(API_BASE_URL)
+                contentType(ContentType.Application.Json)
+            }
+
             install(Logging) {
-                level = LogLevel.ALL // Set to ALL for debugging, INFO for production
+                level = LogLevel.ALL
                 logger = object : Logger {
                     override fun log(message: String) {
                         Log.d("KtorClient", message)
@@ -72,75 +59,50 @@ val networkModule: Module = module {
                     prettyPrint = true
                     isLenient = true
                     ignoreUnknownKeys = true
-                    coerceInputValues = true
                 })
             }
 
-            // Install Auth feature to handle Bearer tokens
+            // The magic happens here!
             install(Auth) {
                 bearer {
-                    // This block is called to get the token when an authorized request is made
                     loadTokens {
-                        val token = get<TokenProvider>().getToken()
+                        // Load the token from our DataStore
+                        val token = sessionStorage.authTokenStream.first()
                         if (token != null) {
-                            BearerTokens(token, "") // Access token, refresh token (if applicable, leave empty for now)
+                            BearerTokens(accessToken = token, refreshToken = "")
                         } else {
-                            BearerTokens("", "") // No tokens found
+                            null // No token found
                         }
                     }
+
+                    refreshTokens {
+                        // This block is triggered when a 401 is received.
+                        Log.d("KtorAuth", "Received 401. Token might be expired or invalid.")
+                        // Here you would normally call your refresh token API endpoint.
+                        // For now, if refresh fails (or isn't implemented), we clear the token.
+                        sessionStorage.clearAuthToken()
+                        null // Indicates refresh failed, stopping the retry.
+                    }
                 }
-            }
-
-            defaultRequest {
-                url(API_BASE_URL) // Base URL for all requests
-                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                // Authorization header is now handled by the Auth feature above
-            }
-
-            engine {
-                // Configure engine if needed
             }
         }
     }
 
-    single<ApiService> { ApiServiceImpl(get()) } // HttpClient is injected via get()
+    single<ApiService> { ApiServiceImpl(get()) }
 }
 
-// Helper interface to provide token access
-interface TokenProvider {
-    fun getToken(): String?
-}
-
-// You would then combine this with your appModule
-// fun getAllModules() = listOf(networkModule, appModule)
-// --- Define your app module ---
 val appModule = module {
-    // ViewModels
-    viewModel { CreateAccountViewModel(get()) }
-    viewModel { CreatePinViewModel(get()) }
-    viewModel { ConfirmPinViewModel(get()) }
-    viewModel { AuthViewModel(get()) } // Depends on AuthRepository
+    // SINGLE SOURCE OF TRUTH FOR TOKEN STORAGE
+    single { SessionStorage(androidContext()) }
 
-    // Repositories
+    // AUTH REPOSITORY
     single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
-    single<SharedPreferences> {
-        androidContext().getSharedPreferences("g_kash_prefs", android.content.Context.MODE_PRIVATE)
-    }
 
-    // Accounts specific definitions
-    single {
-        AccountsApiService(
-            client = get(),
-            baseUrl = API_BASE_URL // Use the same base URL or a specific one if needed
-        )
-    }
-    single<AccountsRepository> { AccountsRepositoryImpl(apiService = get()) }
-    viewModel { (userId: String) ->
-        AccountsViewModel(repository = get(), userId = userId)
-    }
+    factory { CreateAccountUseCase(get()) }
+    factory { CreatePinUseCase(get()) }
+    factory { LoginUseCase(get()) }
+
+    // YOUR VIEWMODELS
+    // viewModel { AuthViewModel(get()) } // We will create this next
+    // viewModel { LoginViewModel(get()) }
 }
-
-fun getAllModules() = listOf(
-    networkModule,
-    appModule
-)
