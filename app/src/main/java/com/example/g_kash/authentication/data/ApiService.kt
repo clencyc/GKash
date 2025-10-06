@@ -1,6 +1,7 @@
 package com.example.g_kash.authentication.data
 
 import android.content.SharedPreferences
+import android.util.Log
 import com.example.g_kash.authentication.domain.AuthRepository
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -130,8 +131,13 @@ class AuthRepositoryImpl(
             val request = LoginRequest(phoneNumber, pin)
             val response = apiService.login(request)
 
+            Log.d("AuthFlow", "Login API Response: success=${response.success}, token=${response.token}, user=${response.user?.id ?: "null"}")
+
+
             if (response.success && response.token != null && response.user != null) {
                 saveAuthToken(response.token)
+
+                Log.d("AuthFlow", "Token saved to sharedPreferences: ${response.token}")
                 saveUser(response.user)
 
                 val user = User(
@@ -151,6 +157,7 @@ class AuthRepositoryImpl(
                     isLoading = false,
                     error = response.message
                 )
+                Log.e("AuthFlow", "Login failed: ${response.message}")
             }
 
             Result.success(response)
@@ -165,6 +172,8 @@ class AuthRepositoryImpl(
 
     override suspend fun saveAuthToken(token: String) {
         sharedPreferences.edit().putString(KEY_AUTH_TOKEN, token).apply()
+
+        Log.d("AuthFlow", "Token saved to sharedPreferences: $KEY_AUTH_TOKEN")
     }
 
     override suspend fun getAuthToken(): String? {
@@ -187,6 +196,16 @@ class AuthRepositoryImpl(
             .apply()
     }
 
+    private fun mapUserDataToUser(userData: UserData?): User? {
+        return userData?.let {
+            User(
+                id = it.id,
+                name = it.name,
+                phoneNumber = it.phoneNumber,
+                idNumber = it.idNumber
+            )
+        }
+    }
     private fun getSavedUser(): User? {
         val id = sharedPreferences.getString(KEY_USER_ID, null)
         val name = sharedPreferences.getString(KEY_USER_NAME, null)

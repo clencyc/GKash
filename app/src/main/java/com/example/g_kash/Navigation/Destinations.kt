@@ -1,4 +1,4 @@
-package com.example.g_kash.authentication.presentation.Navigation
+package com.example.g_kash.Navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -22,6 +22,16 @@ sealed class Destination(val route: String) {
     object Learn : Destination("main/learn")
     object Profile : Destination("main/profile")
 
+    // Account destinations - NEW
+    object Accounts : Destination("accounts/list")
+    object AccountDetails : Destination("accounts/details/{accountId}") {
+        fun createRoute(accountId: String) = "accounts/details/$accountId"
+    }
+    object CreateNewAccount : Destination("accounts/create")
+    object AccountTransactions : Destination("accounts/{accountId}/transactions") {
+        fun createRoute(accountId: String) = "accounts/$accountId/transactions"
+    }
+
     // Transaction destinations
     object SendMoney : Destination("transactions/send")
     object ReceiveMoney : Destination("transactions/receive")
@@ -37,31 +47,29 @@ sealed class Destination(val route: String) {
     }
     object BuyInvestment : Destination("invest/buy")
 
-    // Learning destinations
-    object Courses : Destination("learn/courses")
-    object CourseDetails : Destination("learn/course/{courseId}") {
-        fun createRoute(courseId: String) = "learn/course/$courseId"
-    }
-    object Quiz : Destination("learn/quiz/{quizId}") {
-        fun createRoute(quizId: String) = "learn/quiz/$quizId"
-    }
-
-    // Profile destinations
-    object Settings : Destination("profile/settings")
-    object EditProfile : Destination("profile/edit")
-    object SecuritySettings : Destination("profile/security")
-    object HelpSupport : Destination("profile/help")
+//    // Learning destinations
+//    object Courses : Destination("learn/courses")
+//    object CourseDetails : Destination("learn/course/{courseId}") {
+//        fun createRoute(courseId: String) = "learn/course/$courseId"
+//    }
+//    object Quiz : Destination("learn/quiz/{quizId}") {
+//        fun createRoute(quizId: String) = "learn/quiz/$quizId"
+//    }
+//
+//    // Profile destinations
+//    object Settings : Destination("profile/settings")
+//    object EditProfile : Destination("profile/edit")
+//    object SecuritySettings : Destination("profile/security")
+//    object HelpSupport : Destination("profile/help")
 }
 
 // Navigation groups for better organization
 object NavGraphs {
     const val AUTH = "auth_graph"
     const val MAIN = "main_graph"
+    const val ACCOUNTS = "accounts_graph"
     const val TRANSACTIONS = "transactions_graph"
     const val INVESTMENTS = "investments_graph"
     const val LEARNING = "learning_graph"
     const val PROFILE = "profile_graph"
 }
-
-
-

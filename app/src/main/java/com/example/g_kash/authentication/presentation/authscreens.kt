@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -45,87 +47,191 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
+
+enum class LoginStep {
+    ID_NUMBER,
+    PIN_ENTRY
+}
 
 @Composable
 fun CreateAccountScreen(
     onNavigateToLogin: () -> Unit,
-    onAccountCreated: (userId: String) -> Unit
+    onAccountCreated: (userId: String) -> Unit,
+    onNavigateBack: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var idNumber by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    Column(
+    Surface(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        shape = RoundedCornerShape(12.dp),
+        shadowElevation = 4.dp
     ) {
-        Text("Create Account", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Back Button and Logo
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back to previous screen",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Text(
+                    text = "G-Kash",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(48.dp)) // Balance the layout
+            }
 
-        OutlinedTextField(
-            value = name,
-            onValueChange = {newName -> name = newName},
-            label = { Text("Name")
-            })
-        Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Create Account",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
 
-        OutlinedTextField(
-            value = phoneNumber,
-            onValueChange = { newPhoneNumber -> phoneNumber = newPhoneNumber },
-            label = { Text("Phone Number")
-            })
-        Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Full Name") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = name.isBlank() && errorMessage != null
+            )
 
-        OutlinedTextField(
-            value = idNumber,
-            onValueChange = { newIdNumber -> idNumber = newIdNumber },
-            label = { Text("ID Number")
-            })
-        Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = phoneNumber,
+                onValueChange = {
+                    if (it.length <= 10) phoneNumber = it.filter { char -> char.isDigit() }
+                },
+                label = { Text("Phone Number") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = phoneNumber.length < 10 && errorMessage != null,
+                supportingText = { if (phoneNumber.length < 10 && errorMessage != null) Text("Enter a valid 10-digit phone number") }
+            )
 
-        Button(onClick = { onAccountCreated("user123") }) {
-            Text("Continue")
-        }
-        TextButton(onClick = onNavigateToLogin) {
-            Text("Already have an account? Log In")
+            OutlinedTextField(
+                value = idNumber,
+                onValueChange = { idNumber = it.filter { char -> char.isDigit() } },
+                label = { Text("ID Number") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = idNumber.isBlank() && errorMessage != null
+            )
+
+            errorMessage?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
+            Button(
+                onClick = {
+                    when {
+                        name.isBlank() -> errorMessage = "Name is required"
+                        phoneNumber.length < 10 -> errorMessage = "Invalid phone number"
+                        idNumber.isBlank() -> errorMessage = "ID Number is required"
+                        else -> {
+                            errorMessage = null
+                            onAccountCreated("user_${idNumber}")
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                enabled = name.isNotBlank() && phoneNumber.length >= 10 && idNumber.isNotBlank()
+            ) {
+                Text(
+                    text = "Continue",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            TextButton(onClick = onNavigateToLogin) {
+                Text(
+                    text = "Already have an account? Log In",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }
-
 
 
 @Composable
 fun CreatePinScreen(
     userId: String,
     onPinCreated: (String) -> Unit,
+    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var pin by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    PinInputScreen(
-        title = "Create Pin",
-        subtitle = null,
-        pin = pin,
-        onPinChange = { newPin -> pin = newPin },
-        onActionClick = { onPinCreated(pin) },
-        actionButtonText = "Next",
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
-    )
+    ) { padding ->
+        PinInputScreen(
+            title = "Create Your PIN",
+            subtitle = "Create a 4-digit PIN for secure access",
+            pin = pin,
+            onPinChange = { pin = it },
+            onActionClick = {
+                if (pin.length == 4) {
+                    onPinCreated(pin)
+                } else {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("Please enter a 4-digit PIN")
+                    }
+                }
+            },
+            actionButtonText = "Next",
+            onBackClick = onNavigateBack,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        )
+    }
 }
+
 
 @Composable
 fun ConfirmPinScreen(
     userId: String,
     expectedPin: String,
     onPinConfirmed: () -> Unit,
-    onPinMismatch: () -> Unit = {},
+    onPinMismatch: () -> Unit,
+    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var pin by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(pin) {
         if (pin.length == 4) {
@@ -133,28 +239,193 @@ fun ConfirmPinScreen(
                 onPinConfirmed()
             } else {
                 showError = true
-                kotlinx.coroutines.delay(500)
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("PINs do not match. Please try again.")
+                }
                 pin = ""
-                showError = false
                 onPinMismatch()
             }
         }
     }
 
-    PinInputScreen(
-        title = "Confirm Pin",
-        subtitle = "Re-enter your PIN to confirm",
-        pin = pin,
-        onPinChange = { newPin -> pin = newPin },
-        onActionClick = { /* Auto-validates */ },
-        actionButtonText = "Continue to App",
-        showError = showError,
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
-    )
+    ) { padding ->
+        PinInputScreen(
+            title = "Confirm Your PIN",
+            subtitle = "Re-enter your 4-digit PIN to confirm",
+            pin = pin,
+            onPinChange = { pin = it },
+            onActionClick = { /* Handled by LaunchedEffect */ },
+            actionButtonText = "Continue to App",
+            showError = showError,
+            onBackClick = onNavigateBack,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        )
+    }
+}
+
+
+@Composable
+fun LoginScreen(
+    onNavigateToSignup: () -> Unit,
+    onLoginSuccess: () -> Unit,
+    onNavigateBack: () -> Unit,
+    authViewModel: AuthViewModel = koinViewModel()
+) {
+    var idNumber by remember { mutableStateOf("") }
+    var pin by remember { mutableStateOf("") }
+    var currentLoginStep by remember { mutableStateOf(LoginStep.ID_NUMBER) }
+    var loginError by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            shape = RoundedCornerShape(12.dp),
+            shadowElevation = 4.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = "G-Kash",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(48.dp))
+                }
+
+                Text(
+                    text = "Welcome Back",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                AnimatedVisibility(
+                    visible = currentLoginStep == LoginStep.ID_NUMBER,
+                    enter = scaleIn(),
+                    exit = scaleOut()
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = idNumber,
+                            onValueChange = {
+                                idNumber = it
+                                loginError = null
+                            },
+                            label = { Text("ID Number") },
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = loginError != null
+                        )
+
+                        Button(
+                            onClick = {
+                                if (idNumber.isNotBlank()) {
+                                    currentLoginStep = LoginStep.PIN_ENTRY
+                                } else {
+                                    loginError = "Please enter your ID Number"
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("ID Number is required")
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = idNumber.isNotBlank()
+                        ) {
+                            Text(
+                                text = "Enter Pin",
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = currentLoginStep == LoginStep.PIN_ENTRY,
+                    enter = scaleIn(),
+                    exit = scaleOut()
+                ) {
+                    PinInputScreen(
+                        title = "Enter Your PIN",
+                        subtitle = "Enter the PIN for ID: $idNumber",
+                        pin = pin,
+                        onPinChange = {
+                            pin = it
+                            loginError = null
+                        },
+                        onActionClick = {
+                            if (pin.length == 4) {
+                                // Replace with authViewModel.login(idNumber, pin)
+                                onLoginSuccess()
+                            } else {
+                                loginError = "Invalid PIN"
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Invalid PIN. Please try again.")
+                                }
+                            }
+                        },
+                        actionButtonText = "Login",
+                        showError = loginError != null,
+                        onBackClick = { currentLoginStep = LoginStep.ID_NUMBER }
+                    )
+                }
+
+                loginError?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                TextButton(onClick = onNavigateToSignup) {
+                    Text(
+                        text = "Don't have an account? Sign Up",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
-private fun PinInputScreen(
+fun PinInputScreen(
+    modifier: Modifier = Modifier,
     title: String,
     subtitle: String?,
     pin: String,
@@ -162,80 +433,90 @@ private fun PinInputScreen(
     onActionClick: () -> Unit,
     actionButtonText: String,
     showError: Boolean = false,
-    modifier: Modifier = Modifier
+    onBackClick: (() -> Unit)? = null
 ) {
-    val maxPinLength = 4
-
     Column(
         modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
-            .padding(24.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Spacer(modifier = Modifier.weight(0.5f))
-
-        // Logo
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFFFBBF24), // yellow-400
-                            Color(0xFFD97706)  // yellow-600
+        // Header Section
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                onBackClick?.let {
+                    IconButton(onClick = it) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
+                    }
+                } ?: Spacer(modifier = Modifier.width(48.dp))
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.secondary
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "G",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Learn. Invest. Grow",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
+                }
+                Spacer(modifier = Modifier.width(48.dp))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
-                text = "G",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
             )
+            subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Learn. Invest. Grow",
-            fontSize = 14.sp,
-            color = Color.Gray,
-            fontWeight = FontWeight.Medium
-        )
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        // Title
-        Text(
-            text = title,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-
-        subtitle?.let {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = it,
-                fontSize = 14.sp,
-                color = Color.Gray,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        // PIN Dots Display
+        // PIN Dots
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(vertical = 24.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp), // Reduced from 12.dp
+            modifier = Modifier.padding(vertical = 12.dp) // Reduced from 16.dp
         ) {
-            repeat(maxPinLength) { index ->
+            repeat(4) { index ->
                 PinDot(
                     isFilled = index < pin.length,
                     isError = showError
@@ -243,46 +524,39 @@ private fun PinInputScreen(
             }
         }
 
-        Spacer(modifier = Modifier.weight(0.5f))
-
         // Number Pad
         NumberPad(
             onNumberClick = { number ->
-                if (pin.length < maxPinLength) {
-                    onPinChange(pin + number)
-                }
+                if (pin.length < 4) onPinChange(pin + number)
             },
             onBackspaceClick = {
-                if (pin.isNotEmpty()) {
-                    onPinChange(pin.dropLast(1))
-                }
+                if (pin.isNotEmpty()) onPinChange(pin.dropLast(1))
             },
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f) // Allow number pad to take available space
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
 
         // Action Button
         Button(
             onClick = onActionClick,
-            enabled = pin.length == maxPinLength,
+            enabled = pin.length == 4,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(48.dp)
+                .padding(vertical = 8.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF111827), // gray-900
-                disabledContainerColor = Color(0xFF9CA3AF) // gray-400
+                containerColor = MaterialTheme.colorScheme.primary,
+                disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
             )
         ) {
             Text(
                 text = actionButtonText,
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold
             )
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -303,14 +577,14 @@ private fun PinDot(
 
     Box(
         modifier = modifier
-            .size(16.dp)
+            .size(10.dp) // Reduced from 12.dp
             .scale(scale)
             .clip(CircleShape)
             .background(
                 when {
-                    isError -> Color(0xFFEF4444) // red-500
-                    isFilled -> Color(0xFF111827) // gray-900
-                    else -> Color(0xFFD1D5DB) // gray-300
+                    isError -> MaterialTheme.colorScheme.error
+                    isFilled -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
                 }
             )
     )
@@ -323,21 +597,24 @@ private fun NumberPad(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(6.dp) // Reduced from 8.dp
     ) {
         // Rows 1-3 (numbers 1-9)
         for (row in 0..2) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp) // Reduced from 8.dp
             ) {
                 for (col in 1..3) {
                     val number = (row * 3 + col).toString()
                     NumberButton(
                         text = number,
                         onClick = { onNumberClick(number) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp) // Reduced from 64.dp
                     )
                 }
             }
@@ -346,21 +623,25 @@ private fun NumberPad(
         // Last row (0 and backspace)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp) // Reduced from 8.dp
         ) {
             Spacer(modifier = Modifier.weight(1f))
-
             NumberButton(
                 text = "0",
                 onClick = { onNumberClick("0") },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(1f)
+                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp) // Reduced from 64.dp
             )
-
             NumberButton(
                 text = "",
                 onClick = onBackspaceClick,
                 isBackspace = true,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(1f)
+                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp) // Reduced from 64.dp
             )
         }
     }
@@ -380,13 +661,11 @@ private fun NumberButton(
             isPressed = true
             onClick()
         },
-        modifier = modifier
-            .aspectRatio(1f)
-            .scale(if (isPressed) 0.95f else 1f),
-        shape = RoundedCornerShape(12.dp),
+        modifier = modifier.scale(if (isPressed) 0.95f else 1f),
+        shape = CircleShape,
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFF3F4F6), // gray-100
-            contentColor = Color(0xFF111827) // gray-900
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = ButtonDefaults.buttonElevation(
             defaultElevation = 0.dp,
@@ -397,12 +676,12 @@ private fun NumberButton(
             Icon(
                 imageVector = Icons.Default.Clear,
                 contentDescription = "Backspace",
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp) // Reduced from 24.dp
             )
         } else {
             Text(
                 text = text,
-                fontSize = 20.sp,
+                style = MaterialTheme.typography.titleSmall, // Changed to smaller typography
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -415,138 +694,96 @@ private fun NumberButton(
         }
     }
 }
-@Composable
-fun LoginScreen(onNavigateToSignup: () -> Unit, onLoginSuccess: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Welcome Back", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text("KM Number") })
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onLoginSuccess) {
-            Text("Enter Pin")
-        }
-        TextButton(onClick = onNavigateToSignup) {
-            Text("Don't have an account? Sign Up")
-        }
-    }
-}
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToSendMoney: () -> Unit,
     onNavigateToReceiveMoney: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Home", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Wallet Cash", fontSize = 14.sp)
-                Text("1,100.00 ₴", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("G-Kash", style = MaterialTheme.typography.headlineSmall) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Hello, User!",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(4.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.secondary
+                                )
+                            )
+                        )
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "Wallet Cash",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Text(
+                        text = "$1,100.00", // Replace with dynamic currency
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Button(
+                    onClick = onNavigateToSendMoney,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Send", style = MaterialTheme.typography.labelLarge)
+                }
+                Button(
+                    onClick = onNavigateToReceiveMoney,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Receive", style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onNavigateToSendMoney, modifier = Modifier.weight(1f)) {
-                Text("Send")
-            }
-            Button(onClick = onNavigateToReceiveMoney, modifier = Modifier.weight(1f)) {
-                Text("Receive")
-            }
-        }
-    }
-}
-
-@Composable
-fun WalletScreen(onNavigateToTransactionHistory: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Wallet", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onNavigateToTransactionHistory) {
-            Text("View Transaction History")
-        }
-    }
-}
-
-@Composable
-fun LearnScreen(onNavigateToCourses: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Learn & Grow Your Savings", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onNavigateToCourses) {
-            Text("Browse Courses")
-        }
-    }
-}
-
-@Composable
-fun ProfileScreen(
-    onNavigateToSettings: () -> Unit,
-    onNavigateToEditProfile: () -> Unit,
-    onLogout: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Profile", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onNavigateToEditProfile, modifier = Modifier.fillMaxWidth()) {
-            Text("Edit Profile")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = onNavigateToSettings, modifier = Modifier.fillMaxWidth()) {
-            Text("Settings")
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
-            Text("Logout")
-        }
-    }
-}
-
-@Composable
-fun SendMoneyScreen(onNavigateBack: () -> Unit, onTransactionComplete: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Send Money", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-fun ReceiveMoneyScreen(onNavigateBack: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Receive Money", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-fun TransactionHistoryScreen(
-    onNavigateBack: () -> Unit,
-    onTransactionClick: (String) -> Unit
-) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Transaction History", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-fun CoursesScreen(onNavigateBack: () -> Unit, onCourseClick: (String) -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Courses", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-fun SettingsScreen(onNavigateBack: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Settings", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-fun EditProfileScreen(onNavigateBack: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Edit Profile", fontSize = 24.sp, fontWeight = FontWeight.Bold)
     }
 }

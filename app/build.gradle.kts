@@ -45,6 +45,7 @@ dependencies {
     implementation(libs.koin.core)
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
+    implementation(libs.play.services.auth)
     testImplementation(libs.koin.test)
 
     implementation("androidx.compose.material:material-icons-extended")
@@ -55,24 +56,30 @@ dependencies {
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
-    // Koin for Android
+    // Koin for Android (using the specific versions you had)
     implementation("io.insert-koin:koin-android:3.5.3")
     implementation("io.insert-koin:koin-androidx-compose:3.5.3")
 
-    // Ktor for networking
+    // Ktor for networking (ALIGNED VERSIONS)
     implementation("io.ktor:ktor-client-core:2.3.7")
     implementation("io.ktor:ktor-client-android:2.3.7")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
     implementation("io.ktor:ktor-client-logging:2.3.7")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7") // Corrected version
 
-    // Kotlinx Serialization
+    // Ktor Client Auth feature (Corrected version)
+    implementation("io.ktor:ktor-client-auth:2.3.7")
+
+    // Kotlinx Serialization (Choose ONE version, e.g., 1.6.0)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
 
+
+    // AndroidX dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

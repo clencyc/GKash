@@ -60,6 +60,7 @@ data class ApiError(
 )
 
 // Domain models
+@Serializable
 data class User(
     val id: String,
     val name: String,
@@ -67,6 +68,7 @@ data class User(
     val idNumber: String
 )
 
+@Serializable
 data class AuthState(
     val isLoading: Boolean = false,
     val isAuthenticated: Boolean = false,
