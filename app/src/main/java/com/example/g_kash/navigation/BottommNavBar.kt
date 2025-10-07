@@ -1,14 +1,14 @@
 package com.example.g_kash.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.ChatBubble
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.ChatBubble
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.School
 import androidx.compose.ui.graphics.vector.ImageVector
 
 
@@ -19,28 +19,29 @@ enum class BottomNavItem(
     val unselectedIcon: ImageVector,
     val route: String
 ) {
-    Home(
+    // The Wallet screen is now the Home screen
+    HOME(
+        route = "main/home", // Using a prefix is good practice
         label = "Home",
         selectedIcon = Icons.Filled.Home,
-        unselectedIcon = Icons.Outlined.Home,
-        route = "home"
+        unselectedIcon = Icons.Outlined.Home
     ),
-    Wallet(
-        label = "Wallet",
-        selectedIcon = Icons.Filled.AccountBalanceWallet,
-        unselectedIcon = Icons.Outlined.AccountBalanceWallet,
-        route = "wallet"
+    LEARN(
+        route = "main/learn",
+        label = "Learn",
+        selectedIcon = Icons.Filled.School,
+        unselectedIcon = Icons.Outlined.School
     ),
-    learn(
-        label = "learn",
-        selectedIcon = Icons.Filled.ChatBubble,
-        unselectedIcon = Icons.Outlined.ChatBubble,
-        route = "learn"
+    CHAT(
+        route = "main/chat",
+        label = "Chat",
+        selectedIcon = Icons.Filled.Chat,
+        unselectedIcon = Icons.Outlined.Chat
     ),
-    profile(
-        label = "profile",
+    PROFILE(
+        route = "main/profile",
+        label = "Profile",
         selectedIcon = Icons.Filled.Person,
-        unselectedIcon = Icons.Outlined.Person,
-        route = "profile"
+        unselectedIcon = Icons.Outlined.Person
     )
 }

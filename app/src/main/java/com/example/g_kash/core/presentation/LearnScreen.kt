@@ -15,7 +15,9 @@ fun LearnScreen() {
 }
 
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(
+    onLogout: () -> Unit
+) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text("Profile Screen")
     }

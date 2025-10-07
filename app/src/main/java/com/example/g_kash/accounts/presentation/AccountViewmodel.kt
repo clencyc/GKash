@@ -2,9 +2,10 @@ package com.example.g_kash.accounts.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.g_kash.accounts.data.*
+import com.example.g_kash.accounts.data.Account
+import com.example.g_kash.accounts.data.CreateAccountRequest
 import com.example.g_kash.accounts.domain.AccountsRepository
-import com.google.android.gms.common.internal.AccountType
+// FIX 1: Removed the incorrect import for com.google.android.gms.common.internal.AccountType
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -23,14 +24,14 @@ data class AccountsUiState(
  * ViewModel for managing accounts
  */
 class AccountsViewModel(
-    private val repository: AccountsRepository,
-    private val userId: String
+    private val accountsRepository: AccountsRepository // This is the correct property name
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AccountsUiState())
     val uiState: StateFlow<AccountsUiState> = _uiState.asStateFlow()
 
     init {
+        // Load initial data when the ViewModel is created
         loadUserAccounts()
         loadTotalBalance()
     }
@@ -42,27 +43,29 @@ class AccountsViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            repository.getUserAccounts().collect { result ->
-                result.fold(
-                    onSuccess = { accounts ->
-                        _uiState.update {
-                            it.copy(
-                                accounts = accounts,
-                                isLoading = false,
-                                error = null
-                            )
+            // FIX 2 & 4: Use the correct repository name and the recommended flow collection
+            accountsRepository.getUserAccounts()
+                .onEach { result ->
+                    result.fold(
+                        onSuccess = { accounts ->
+                            _uiState.update {
+                                it.copy(
+                                    accounts = accounts,
+                                    isLoading = false
+                                )
+                            }
+                        },
+                        onFailure = { exception ->
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    error = exception.message ?: "Failed to load accounts"
+                                )
+                            }
                         }
-                    },
-                    onFailure = { exception ->
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                error = exception.message ?: "Failed to load accounts"
-                            )
-                        }
-                    }
-                )
-            }
+                    )
+                }
+                .launchIn(viewModelScope) // Use launchIn for safer collection
         }
     }
 
@@ -71,18 +74,21 @@ class AccountsViewModel(
      */
     fun loadTotalBalance() {
         viewModelScope.launch {
-            repository.getTotalBalance().collect { result ->
-                result.fold(
-                    onSuccess = { balance ->
-                        _uiState.update { it.copy(totalBalance = balance) }
-                    },
-                    onFailure = { exception ->
-                        _uiState.update {
-                            it.copy(error = exception.message ?: "Failed to load balance")
+            // FIX 3: Use the correct repository property name 'accountsRepository'
+            accountsRepository.getTotalBalance()
+                .onEach { result ->
+                    result.fold(
+                        onSuccess = { balance ->
+                            _uiState.update { it.copy(totalBalance = balance) }
+                        },
+                        onFailure = { exception ->
+                            _uiState.update {
+                                it.copy(error = exception.message ?: "Failed to load balance")
+                            }
                         }
-                    }
-                )
-            }
+                    )
+                }
+                .launchIn(viewModelScope)
         }
     }
 
@@ -94,23 +100,56 @@ class AccountsViewModel(
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             val request = CreateAccountRequest(accountType = accountType)
-            repository.createAccount(request).collect { result ->
-                result.fold(
-                    onSuccess = { account ->
-                        // Reload accounts after creation
-                        loadUserAccounts()
-                        loadTotalBalance()
-                    },
-                    onFailure = { exception ->
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                error = exception.message ?: "Failed to create account"
-                            )
+            // FIX 3: Use the correct repository property name 'accountsRepository'
+            accountsRepository.createAccount(request)
+                .onEach { result ->
+                    result.fold(
+                        onSuccess = {
+                            // Reload data after successful creation
+                            loadUserAccounts()
+                            loadTotalBalance()
+                        },
+                        onFailure = { exception ->
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    error = exception.message ?: "Failed to create account"
+                                )
+                            }
                         }
-                    }
-                )
-            }
+                    )
+                }
+                .launchIn(viewModelScope)
+        }
+    }
+
+    /**
+     * Delete an account
+     */
+    fun deleteAccount(accountId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
+            // FIX 3: Use the correct repository property name 'accountsRepository'
+            accountsRepository.deleteAccount(accountId)
+                .onEach { result ->
+                    result.fold(
+                        onSuccess = {
+                            // Reload data after successful deletion
+                            loadUserAccounts()
+                            loadTotalBalance()
+                        },
+                        onFailure = { exception ->
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    error = exception.message ?: "Failed to delete account"
+                                )
+                            }
+                        }
+                    )
+                }
+                .launchIn(viewModelScope)
         }
     }
 
@@ -128,32 +167,6 @@ class AccountsViewModel(
         _uiState.update { it.copy(selectedAccount = null) }
     }
 
-    /**
-     * Delete an account
-     */
-    fun deleteAccount(accountId: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-
-            repository.deleteAccount(accountId).collect { result ->
-                result.fold(
-                    onSuccess = {
-                        // Reload accounts after deletion
-                        loadUserAccounts()
-                        loadTotalBalance()
-                    },
-                    onFailure = { exception ->
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                error = exception.message ?: "Failed to delete account"
-                            )
-                        }
-                    }
-                )
-            }
-        }
-    }
 
     /**
      * Clear error state

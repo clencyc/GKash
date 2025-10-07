@@ -80,10 +80,7 @@ fun WalletScreen(
                     }
                 }
             }
-
-            // ... rest of your UI ...
         }
     }
-    // ... error handling ...
 }
 

@@ -2,6 +2,9 @@ package com.example.g_kash.di
 
 
 import android.util.Log
+import com.example.g_kash.accounts.domain.AccountsRepository
+import com.example.g_kash.accounts.domain.AccountsRepositoryImpl
+import com.example.g_kash.accounts.presentation.AccountsViewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import com.example.g_kash.authentication.data.ApiService
 import com.example.g_kash.authentication.data.ApiServiceImpl
@@ -17,6 +20,8 @@ import com.example.g_kash.authentication.presentation.AuthViewModel
 import com.example.g_kash.authentication.presentation.CreateAccountViewModel
 import com.example.g_kash.authentication.presentation.CreatePinViewModel
 import com.example.g_kash.authentication.presentation.UserViewModel
+import com.example.g_kash.wallet.data.WalletRepository
+import com.example.g_kash.wallet.data.WalletRepositoryImpl
 import com.example.g_kash.wallet.presentation.WalletViewModel
 import io.ktor.client.engine.android.*
 import io.ktor.client.plugins.*
@@ -105,21 +110,22 @@ val appModule = module {
 
     // AUTH REPOSITORY
     single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
+    single<AccountsRepository> { AccountsRepositoryImpl(get()) }
+    single<WalletRepository> { WalletRepositoryImpl(get()) }
+
+
 
     factory { CreateAccountUseCase(get()) }
     factory { CreatePinUseCase(get()) }
     factory { LoginUseCase(get()) }
 
     // YOUR VIEWMODELS
-    viewModel { UserViewModel(get()) }
-    viewModel { AuthViewModel(get()) }
-    // YOUR VIEWMODELS
     viewModel { AuthViewModel(get()) }
     viewModel { UserViewModel(get()) }
     viewModel { CreateAccountViewModel(get()) }
     viewModel { CreatePinViewModel(get()) }
-    viewModel { (userId: String) ->
-        WalletViewModel(userId = userId, walletRepository = get())
-    }
+    viewModel { AccountsViewModel(get()) }
 
+    // The definition for WalletViewModel should also be here
+    viewModel { params -> WalletViewModel(walletRepository = get(), userId = params.get()) }
 }

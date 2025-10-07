@@ -14,8 +14,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.navigation.compose.rememberNavController
 import com.example.g_kash.navigation.Destination
-import com.example.g_kash.navigation.AppNavHost
 import androidx.compose.runtime.*
+import com.example.g_kash.navigation.AppNavigation
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,25 +27,9 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    GKashApp()
+                    AppNavigation()
                 }
             }
         }
     }
-}
-
-@Composable
-fun GKashApp() {
-    val navController = rememberNavController()
-
-    var isLoggedIn by remember { mutableStateOf(false) }
-    var userId by remember { mutableStateOf<String?>(null) }
-
-    val startDestination = if (isLoggedIn) {
-        Destination.Home.route
-    } else {
-        Destination.Login.route
-    }
-
-    AppNavHost()
 }
