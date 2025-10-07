@@ -13,7 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.navigation.compose.rememberNavController
-import com.example.g_kash.Navigation.Destination
+import com.example.g_kash.navigation.Destination
 import com.example.g_kash.navigation.AppNavHost
 import androidx.compose.runtime.*
 

@@ -1,35 +1,40 @@
 package com.example.g_kash.accounts.presentation
 
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.g_kash.accounts.data.Account
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountDetailsScreen(
     accountId: String,
-    viewModel: AccountsViewModel,
+    // It's better practice to let the screen get its own ViewModel
+    viewModel: AccountsViewModel = koinViewModel(),
     onNavigateBack: () -> Unit,
     onNavigateToTransactions: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val account = uiState.accounts.find { it.accountId == accountId }
+    val account = uiState.accounts.find { it.id == accountId }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showMoreOptions by remember { mutableStateOf(false) }
 
-    LaunchedEffect(accountId) {
-        viewModel.loadUserAccounts()
+    // Re-load accounts if they are not present, ensuring data is fresh.
+    LaunchedEffect(Unit) {
+        if (uiState.accounts.isEmpty()) {
+            viewModel.loadUserAccounts()
+        }
     }
 
     Scaffold(
@@ -76,62 +81,61 @@ fun AccountDetailsScreen(
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            Icons.Default.Error,
+                            Icons.Default.ErrorOutline,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.error
+                            tint = MaterialTheme.colorScheme.outline
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("Account not found", style = MaterialTheme.typography.titleLarge)
+                        Text("It may have been deleted.", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
         } else {
+            // The call to AccountType.values() will now use the enum from the new helper file.
+            val accountTypeEnum = AccountType.values().find { it.apiValue == account.accountType } ?: AccountType.BALANCED_FUND
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(16.dp)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Account Balance Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = getAccountTypeColor(account.accountType)
+                        // The call to getAccountTypeColor now unambiguously resolves to the function in AccountUIHelpers.kt
+                        containerColor = getAccountTypeColor(accountTypeEnum)
                     ),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(24.dp),
+                        modifier = Modifier
+                            .padding(24.dp)
+                            .fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
-                            imageVector = getAccountTypeIcon(account.accountType),
+                            imageVector = getAccountTypeIcon(accountTypeEnum),
                             contentDescription = null,
                             modifier = Modifier.size(48.dp),
                             tint = Color.White
                         )
-
                         Spacer(modifier = Modifier.height(16.dp))
-
                         Text(
-                            text = formatAccountType(account.accountType),
+                            text = formatAccountType(accountTypeEnum),
                             style = MaterialTheme.typography.titleLarge,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
-
                         Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = "Current Balance",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-
+                        Text("Current Balance", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f))
                         Spacer(modifier = Modifier.height(4.dp))
-
                         Text(
+                            // The call to formatCurrency now unambiguously resolves to the function in AccountUIHelpers.kt
                             text = formatCurrency(account.accountBalance),
                             style = MaterialTheme.typography.displaySmall,
                             color = Color.White,
@@ -142,53 +146,20 @@ fun AccountDetailsScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Action Buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { /* TODO: Implement deposit */ },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Deposit")
-                    }
-
-                    OutlinedButton(
-                        onClick = { /* TODO: Implement withdraw */ },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Remove, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Withdraw")
-                    }
+                // Account Information
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text("Account Information", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    InfoRow(label = "Account ID", value = account.id)
+                    Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    InfoRow(label = "Account Type", value = formatAccountType(accountTypeEnum))
+                    Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    InfoRow(label = "Created", value = account.createdAt)
+                    Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    InfoRow(label = "Last Updated", value = account.updatedAt)
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Account Information
-                Text(
-                    text = "Account Information",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                InfoRow(label = "Account ID", value = account.accountId)
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
-
-                InfoRow(label = "Account Type", value = formatAccountType(account.accountType))
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
-
-                InfoRow(label = "Created", value = account.createdAt)
-                Divider(modifier = Modifier.padding(vertical = 12.dp))
-
-                InfoRow(label = "Last Updated", value = account.updatedAt)
-
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.weight(1f)) // Pushes button to bottom
 
                 // View Transactions Button
                 Button(
@@ -209,9 +180,7 @@ fun AccountDetailsScreen(
             onDismissRequest = { showDeleteDialog = false },
             icon = { Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error) },
             title = { Text("Delete Account?") },
-            text = {
-                Text("Are you sure you want to delete this account? This action cannot be undone.")
-            },
+            text = { Text("Are you sure you want to delete this account? This action cannot be undone.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -222,34 +191,23 @@ fun AccountDetailsScreen(
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
-                ) {
-                    Text("Delete")
-                }
+                ) { Text("Delete") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
             }
         )
     }
 }
 
+// InfoRow does not need changes
 @Composable
 fun InfoRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
     }
 }

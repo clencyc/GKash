@@ -1,8 +1,4 @@
-package com.example.g_kash.Navigation
-
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.ui.graphics.vector.ImageVector
+package com.example.g_kash.navigation
 
 // Sealed class for type-safe navigation
 sealed class Destination(val route: String) {

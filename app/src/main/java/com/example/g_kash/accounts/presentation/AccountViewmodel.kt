@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.g_kash.accounts.data.*
 import com.example.g_kash.accounts.domain.AccountsRepository
+import com.google.android.gms.common.internal.AccountType
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -23,7 +24,7 @@ data class AccountsUiState(
  */
 class AccountsViewModel(
     private val repository: AccountsRepository,
-    private val userId: String // Would typically come from auth session
+    private val userId: String
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AccountsUiState())
@@ -41,7 +42,7 @@ class AccountsViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            repository.getUserAccounts(userId).collect { result ->
+            repository.getUserAccounts().collect { result ->
                 result.fold(
                     onSuccess = { accounts ->
                         _uiState.update {
@@ -70,7 +71,7 @@ class AccountsViewModel(
      */
     fun loadTotalBalance() {
         viewModelScope.launch {
-            repository.getTotalBalance(userId).collect { result ->
+            repository.getTotalBalance().collect { result ->
                 result.fold(
                     onSuccess = { balance ->
                         _uiState.update { it.copy(totalBalance = balance) }
@@ -88,12 +89,12 @@ class AccountsViewModel(
     /**
      * Create a new account
      */
-    fun createAccount(accountType: AccountType, initialBalance: Double = 0.0) {
+    fun createAccount(accountType: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            val request = CreateAccountRequest(accountType, initialBalance)
-            repository.createAccount(userId, request).collect { result ->
+            val request = CreateAccountRequest(accountType = accountType)
+            repository.createAccount(request).collect { result ->
                 result.fold(
                     onSuccess = { account ->
                         // Reload accounts after creation

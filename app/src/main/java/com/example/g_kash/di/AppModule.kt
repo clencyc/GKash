@@ -1,16 +1,23 @@
 package com.example.g_kash.di
 
-import android.content.Context
+
 import android.util.Log
+import org.koin.androidx.viewmodel.dsl.viewModel
 import com.example.g_kash.authentication.data.ApiService
 import com.example.g_kash.authentication.data.ApiServiceImpl
 import io.ktor.client.*
 import com.example.g_kash.data.SessionStorage
 import com.example.g_kash.authentication.domain.AuthRepository
 import com.example.g_kash.authentication.data.AuthRepositoryImpl
+import com.example.g_kash.authentication.data.createHttpClient
 import com.example.g_kash.authentication.domain.CreateAccountUseCase
 import com.example.g_kash.authentication.domain.CreatePinUseCase
 import com.example.g_kash.authentication.domain.LoginUseCase
+import com.example.g_kash.authentication.presentation.AuthViewModel
+import com.example.g_kash.authentication.presentation.CreateAccountViewModel
+import com.example.g_kash.authentication.presentation.CreatePinViewModel
+import com.example.g_kash.authentication.presentation.UserViewModel
+import com.example.g_kash.wallet.presentation.WalletViewModel
 import io.ktor.client.engine.android.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
@@ -94,6 +101,7 @@ val networkModule = module {
 val appModule = module {
     // SINGLE SOURCE OF TRUTH FOR TOKEN STORAGE
     single { SessionStorage(androidContext()) }
+    single { createHttpClient(sessionStorage = get()) }
 
     // AUTH REPOSITORY
     single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
@@ -103,6 +111,15 @@ val appModule = module {
     factory { LoginUseCase(get()) }
 
     // YOUR VIEWMODELS
-    // viewModel { AuthViewModel(get()) } // We will create this next
-    // viewModel { LoginViewModel(get()) }
+    viewModel { UserViewModel(get()) }
+    viewModel { AuthViewModel(get()) }
+    // YOUR VIEWMODELS
+    viewModel { AuthViewModel(get()) }
+    viewModel { UserViewModel(get()) }
+    viewModel { CreateAccountViewModel(get()) }
+    viewModel { CreatePinViewModel(get()) }
+    viewModel { (userId: String) ->
+        WalletViewModel(userId = userId, walletRepository = get())
+    }
+
 }

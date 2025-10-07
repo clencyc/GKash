@@ -6,23 +6,26 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 
 /**
- * API Service for account-related operations
+ * API Service for account-related operations, aligned with API documentation.
  */
 class AccountsApiService(
     private val client: HttpClient,
-    private val baseUrl: String = "https://api.gkash.com" // Replace with actual API URL
+    // FIX: Base URL should probably not include /api here if you add it in every call
+    private val baseUrl: String = "https://gkash.onrender.com"
 ) {
 
     /**
-     * Fetch all accounts for the authenticated user
+     * Corresponds to: GET /accounts
+     * Fetches all accounts for the authenticated user (identified by auth token).
      */
-    suspend fun getUserAccounts(userId: String): Result<List<Account>> {
+    suspend fun getUserAccounts(): Result<List<Account>> {
         return try {
-            val response = client.get("$baseUrl/accounts/user/$userId") {
+            val response = client.get("$baseUrl/accounts") { // FIX: Removed /user/{userId}
                 contentType(ContentType.Application.Json)
             }
 
             if (response.status == HttpStatusCode.OK) {
+                // Assuming the API returns a JSON object like { "accounts": [...] }
                 val accountsResponse: AccountsListResponse = response.body()
                 Result.success(accountsResponse.accounts)
             } else {
@@ -34,19 +37,24 @@ class AccountsApiService(
     }
 
     /**
-     * Fetch a specific account by ID
+     * Corresponds to: GET /accounts/{id}
+     * Fetches a specific account by its ID.
      */
     suspend fun getAccountById(accountId: String): Result<Account> {
         return try {
-            val response = client.get("$baseUrl/accounts/$accountId") {
+            val response = client.get("$baseUrl/accounts/$accountId") { // FIX: Corrected URL path
                 contentType(ContentType.Application.Json)
             }
 
             if (response.status == HttpStatusCode.OK) {
-                val accountResponse: AccountResponse = response.body()
-                accountResponse.account?.let {
-                    Result.success(it)
-                } ?: Result.failure(Exception("Account not found"))
+                // Assuming the API returns the Account object directly or wrapped
+                // If it's wrapped like { "account": {...} }, use SingleAccountResponse
+                // val wrapper: SingleAccountResponse = response.body()
+                // Result.success(wrapper.account)
+
+                // If the API returns the Account object directly:
+                val account: Account = response.body()
+                Result.success(account)
             } else {
                 Result.failure(Exception("Failed to fetch account: ${response.status}"))
             }
@@ -56,23 +64,20 @@ class AccountsApiService(
     }
 
     /**
-     * Create a new account
+     * Corresponds to: POST /accounts
+     * Creates a new account for the authenticated user.
      */
-    suspend fun createAccount(
-        userId: String,
-        request: CreateAccountRequest
-    ): Result<Account> {
+    suspend fun createAccount(request: CreateAccountRequest): Result<Account> {
         return try {
-            val response = client.post("$baseUrl/accounts/user/$userId") {
+            val response = client.post("$baseUrl/accounts") { // FIX: Removed /user/{userId}
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
 
             if (response.status == HttpStatusCode.Created) {
-                val accountResponse: AccountResponse = response.body()
-                accountResponse.account?.let {
-                    Result.success(it)
-                } ?: Result.failure(Exception("Failed to create account"))
+                // Assuming the API returns the newly created account object
+                val createdAccount: Account = response.body()
+                Result.success(createdAccount)
             } else {
                 Result.failure(Exception("Failed to create account: ${response.status}"))
             }
@@ -82,7 +87,8 @@ class AccountsApiService(
     }
 
     /**
-     * Update account balance
+     * NOTE: Your API docs don't specify an endpoint for updating a balance.
+     * This is a placeholder for a potential: PUT /accounts/{id}/balance
      */
     suspend fun updateAccountBalance(request: UpdateAccountBalanceRequest): Result<Account> {
         return try {
@@ -92,10 +98,8 @@ class AccountsApiService(
             }
 
             if (response.status == HttpStatusCode.OK) {
-                val accountResponse: AccountResponse = response.body()
-                accountResponse.account?.let {
-                    Result.success(it)
-                } ?: Result.failure(Exception("Failed to update balance"))
+                val updatedAccount: Account = response.body()
+                Result.success(updatedAccount)
             } else {
                 Result.failure(Exception("Failed to update balance: ${response.status}"))
             }
@@ -105,7 +109,8 @@ class AccountsApiService(
     }
 
     /**
-     * Delete an account
+     * Corresponds to: DELETE /accounts/{id}
+     * Deletes a specific account by its ID.
      */
     suspend fun deleteAccount(accountId: String): Result<Boolean> {
         return try {
@@ -124,11 +129,13 @@ class AccountsApiService(
     }
 
     /**
-     * Get total balance across all accounts
+     * NOTE: Your API docs don't specify an endpoint for getting the total balance.
+     * This implementation calculates it on the client side, which is a good approach.
      */
-    suspend fun getTotalBalance(userId: String): Result<Double> {
+    suspend fun getTotalBalance(): Result<Double> {
         return try {
-            val accountsResult = getUserAccounts(userId)
+            // FIX: Call the updated getUserAccounts() without userId
+            val accountsResult = getUserAccounts()
             accountsResult.map { accounts ->
                 accounts.sumOf { it.accountBalance }
             }

@@ -1,72 +1,63 @@
 package com.example.g_kash.accounts.data
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * Account Types supported by the system
- */
-enum class AccountType {
-    BALANCED_FUND,
-    FIXED_INCOME_FUND,
-    MONEY_MARKET_FUND,
-    STOCK_MARKET
-}
-
-/**
- * Account data model
- */
+// Represents the structure of a single account object from your API
 @Serializable
 data class Account(
-    val accountId: String,
-    val accountType: AccountType,
-    val userId: String,
+    val id: String,
+    @SerialName("account_type")
+    val accountType: String,
+    @SerialName("balance")
     val accountBalance: Double,
+    @SerialName("created_at")
     val createdAt: String,
+
+    @SerialName("updated_at")
     val updatedAt: String
 )
 
-/**
- * Request model for creating a new account
- */
 @Serializable
-data class CreateAccountRequest(
-    val accountType: AccountType,
-    val initialBalance: Double = 0.0
-)
-
-/**
- * Request model for updating account balance
- */
-@Serializable
-data class UpdateAccountBalanceRequest(
-    val accountId: String,
-    val newBalance: Double
-)
-
-/**
- * Response model for account operations
- */
-@Serializable
-data class AccountResponse(
+data class TotalBalanceResponse(
     val success: Boolean,
-    val message: String,
-    val account: Account? = null
+    @SerialName("total_balance")
+    val totalBalance: Double,
+    val message: String? = null
 )
 
-/**
- * Response model for listing accounts
- */
+
+@Serializable
+data class AccountsApiResponse( // Renamed for clarity
+    val success: Boolean,
+    val accounts: List<Account>, // Plural "accounts"
+    val message: String? = null
+)
+
+// For the GET /accounts endpoint (list of accounts)
 @Serializable
 data class AccountsListResponse(
-    val success: Boolean,
+    // Assuming your API wraps the list in an "accounts" object
     val accounts: List<Account>
 )
 
-/**
- * UI state for account balance display
- */
-data class AccountBalanceState(
-    val balance: Double = 0.0,
-    val isLoading: Boolean = false,
-    val error: String? = null
+// For GET /accounts/{id} and POST /accounts responses
+@Serializable
+data class SingleAccountResponse(
+    // Assuming your API wraps the single object in an "account" object
+    val account: Account
+)
+
+// For the POST /accounts request body
+@Serializable
+data class CreateAccountRequest(
+    @SerialName("account_type")
+    val accountType: String
+)
+
+// For updating the balance (assuming this is the structure)
+@Serializable
+data class UpdateAccountBalanceRequest(
+    val accountId: String,
+    val amount: Double
 )

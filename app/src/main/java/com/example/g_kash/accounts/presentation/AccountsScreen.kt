@@ -1,29 +1,43 @@
 package com.example.g_kash.accounts.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.g_kash.accounts.data.Account
-import com.example.g_kash.accounts.data.AccountType
+import org.koin.androidx.compose.koinViewModel
 import java.text.NumberFormat
 import java.util.*
+
+// --- FIX 1: DEFINE THE MISSING AccountType ENUM ---
+// This enum holds display information and the raw string value the API expects.
+enum class AccountType(val displayName: String, val apiValue: String) {
+    BALANCED_FUND("Balanced Fund", "balanced_fund"),
+    FIXED_INCOME_FUND("Fixed Income Fund", "fixed_income_fund"),
+    MONEY_MARKET_FUND("Money Market Fund", "money_market_fund"),
+    STOCK_MARKET("Stock Market", "stock_market")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsScreen(
-    viewModel: AccountsViewModel,
+    // It's better practice to let the screen get its own ViewModel
+    viewModel: AccountsViewModel = koinViewModel(),
     onNavigateToTransactions: (String) -> Unit,
     onNavigateBack: () -> Unit = {}
 ) {
@@ -107,53 +121,36 @@ fun AccountsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Loading State
-            if (uiState.isLoading && uiState.accounts.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else if (uiState.accounts.isEmpty()) {
-                // Empty State
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.AccountBalance,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "No accounts yet",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Create your first account to get started",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.outline
-                        )
+            // Loading or Empty State
+            when {
+                uiState.isLoading && uiState.accounts.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
                     }
                 }
-            } else {
-                // Accounts List
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(uiState.accounts) { account ->
-                        AccountCard(
-                            account = account,
-                            onClick = { onNavigateToTransactions(account.accountId) }
-                        )
+                uiState.accounts.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.AccountBalance, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("No accounts yet", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Create your first account to get started", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                        }
+                    }
+                }
+                else -> {
+                    // Accounts List
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(uiState.accounts) { account ->
+                            AccountCard(
+                                account = account,
+                                onClick = {
+                                    // --- FIX 2: USE 'id' INSTEAD OF 'accountId' ---
+                                    onNavigateToTransactions(account.id)
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -164,8 +161,10 @@ fun AccountsScreen(
     if (showCreateDialog) {
         CreateAccountDialog(
             onDismiss = { showCreateDialog = false },
-            onCreate = { accountType, initialBalance ->
-                viewModel.createAccount(accountType, initialBalance)
+            // --- FIX 3: UPDATE THE `onCreate` LAMBDA SIGNATURE ---
+            onCreate = { accountApiValue ->
+                // The ViewModel expects only the API string value
+                viewModel.createAccount(accountApiValue)
                 showCreateDialog = false
             }
         )
@@ -173,83 +172,10 @@ fun AccountsScreen(
 }
 
 @Composable
-fun WalletBalanceCard(
-    balance: Double,
-    isLoading: Boolean
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1A1A2E)
-        ),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Total Balance (Ksh)",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f)
-                )
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                }
-            }
+fun AccountCard(account: Account, onClick: () -> Unit) {
+    // This helper function converts the raw string from the API back to our enum
+    val accountTypeEnum = AccountType.values().find { it.apiValue == account.accountType } ?: AccountType.BALANCED_FUND
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = formatCurrency(balance),
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = { /* Handle Save */ },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFC107)
-                    )
-                ) {
-                    Text("Save", color = Color.Black)
-                }
-
-                Button(
-                    onClick = { /* Handle Withdraw */ },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF424242)
-                    )
-                ) {
-                    Text("Withdraw", color = Color.White)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AccountCard(
-    account: Account,
-    onClick: () -> Unit
-) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -262,30 +188,23 @@ fun AccountCard(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Account Icon
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = getAccountTypeColor(account.accountType).copy(alpha = 0.1f),
+                color = getAccountTypeColor(accountTypeEnum).copy(alpha = 0.1f),
                 modifier = Modifier.size(48.dp)
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Icon(
-                        imageVector = getAccountTypeIcon(account.accountType),
+                        imageVector = getAccountTypeIcon(accountTypeEnum),
                         contentDescription = null,
-                        tint = getAccountTypeColor(account.accountType)
+                        tint = getAccountTypeColor(accountTypeEnum)
                     )
                 }
             }
-
             Spacer(modifier = Modifier.width(16.dp))
-
-            // Account Details
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = formatAccountType(account.accountType),
+                    text = formatAccountType(accountTypeEnum),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -297,12 +216,7 @@ fun AccountCard(
                     fontWeight = FontWeight.Bold
                 )
             }
-
-            Icon(
-                Icons.Default.KeyboardArrowRight,
-                contentDescription = "View Details",
-                tint = MaterialTheme.colorScheme.outline
-            )
+            Icon(Icons.Default.KeyboardArrowRight, contentDescription = "View Details", tint = MaterialTheme.colorScheme.outline)
         }
     }
 }
@@ -310,10 +224,10 @@ fun AccountCard(
 @Composable
 fun CreateAccountDialog(
     onDismiss: () -> Unit,
-    onCreate: (AccountType, Double) -> Unit
+    // --- FIX 3 (continued): The dialog now provides the raw API string ---
+    onCreate: (apiValue: String) -> Unit
 ) {
     var selectedType by remember { mutableStateOf<AccountType?>(null) }
-    var initialBalance by remember { mutableStateOf("0") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -322,7 +236,7 @@ fun CreateAccountDialog(
             Column {
                 Text("Select Account Type:")
                 Spacer(modifier = Modifier.height(8.dp))
-
+                // Iterate through the enum we defined at the top of the file
                 AccountType.values().forEach { type ->
                     Row(
                         modifier = Modifier
@@ -339,63 +253,47 @@ fun CreateAccountDialog(
                         Text(formatAccountType(type))
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = initialBalance,
-                    onValueChange = { initialBalance = it },
-                    label = { Text("Initial Balance (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
                     selectedType?.let { type ->
-                        onCreate(type, initialBalance.toDoubleOrNull() ?: 0.0)
+                        // Pass the raw API string value ("balanced_fund", etc.)
+                        onCreate(type.apiValue)
                     }
                 },
                 enabled = selectedType != null
-            ) {
-                Text("Create")
-            }
+            ) { Text("Create") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
 
-// Helper Functions
-fun formatCurrency(amount: Double): String {
-    val formatter = NumberFormat.getCurrencyInstance(Locale("en", "KE"))
-    formatter.maximumFractionDigits = 2
-    return formatter.format(amount)
-}
-
-fun formatAccountType(type: AccountType): String {
-    return when (type) {
-        AccountType.BALANCED_FUND -> "Balanced Fund"
-        AccountType.FIXED_INCOME_FUND -> "Fixed Income Fund"
-        AccountType.MONEY_MARKET_FUND -> "Money Market Fund"
-        AccountType.STOCK_MARKET -> "Stock Market"
+// WalletBalanceCard does not need changes
+@Composable
+fun WalletBalanceCard(balance: Double, isLoading: Boolean) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E)), shape = RoundedCornerShape(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Total Balance (Ksh)", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f))
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = formatCurrency(balance), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = Color.White)
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = { /* Handle Save */ }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107))) {
+                    Text("Save", color = Color.Black)
+                }
+                Button(onClick = { /* Handle Withdraw */ }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242))) {
+                    Text("Withdraw", color = Color.White)
+                }
+            }
+        }
     }
-}
-
-fun getAccountTypeIcon(type: AccountType) = when (type) {
-    AccountType.BALANCED_FUND -> Icons.Default.AccountBalance
-    AccountType.FIXED_INCOME_FUND -> Icons.Default.Lock
-    AccountType.MONEY_MARKET_FUND -> Icons.Default.Savings
-    AccountType.STOCK_MARKET -> Icons.Default.TrendingUp
-}
-
-fun getAccountTypeColor(type: AccountType) = when (type) {
-    AccountType.BALANCED_FUND -> Color(0xFF4CAF50)
-    AccountType.FIXED_INCOME_FUND -> Color(0xFF2196F3)
-    AccountType.MONEY_MARKET_FUND -> Color(0xFFFFC107)
-    AccountType.STOCK_MARKET -> Color(0xFFFF5722)
 }

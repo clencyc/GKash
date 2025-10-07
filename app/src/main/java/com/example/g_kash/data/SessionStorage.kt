@@ -16,6 +16,7 @@ class SessionStorage(private val context: Context) {
 
     companion object {
         private val AUTH_TOKEN_KEY = stringPreferencesKey("auth_token")
+        private val USER_ID_KEY = stringPreferencesKey("user_id")
     }
 
     // Flow to observe the auth token
@@ -23,6 +24,18 @@ class SessionStorage(private val context: Context) {
         .map { preferences ->
             preferences[AUTH_TOKEN_KEY]
         }
+
+    val userIdStream: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[USER_ID_KEY]
+        }
+
+    suspend fun saveSession(token: String, userId: String) {
+        context.dataStore.edit { preferences ->
+            preferences[AUTH_TOKEN_KEY] = token
+            preferences[USER_ID_KEY] = userId
+        }
+    }
 
     // Function to save the auth token
     suspend fun saveAuthToken(token: String) {

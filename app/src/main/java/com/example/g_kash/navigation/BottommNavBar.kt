@@ -1,4 +1,4 @@
-package com.example.g_kash.Navigation
+package com.example.g_kash.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet

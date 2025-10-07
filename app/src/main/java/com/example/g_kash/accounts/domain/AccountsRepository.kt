@@ -8,12 +8,15 @@ import kotlinx.coroutines.flow.flow
  * Repository interface for account operations
  */
 interface AccountsRepository {
-    suspend fun getUserAccounts(userId: String): Flow<Result<List<Account>>>
+    // FIX: Removed userId. The user is identified by the auth token now.
+    suspend fun getUserAccounts(): Flow<Result<List<Account>>>
     suspend fun getAccountById(accountId: String): Flow<Result<Account>>
-    suspend fun createAccount(userId: String, request: CreateAccountRequest): Flow<Result<Account>>
+    // FIX: Removed userId.
+    suspend fun createAccount(request: CreateAccountRequest): Flow<Result<Account>>
     suspend fun updateAccountBalance(request: UpdateAccountBalanceRequest): Flow<Result<Account>>
     suspend fun deleteAccount(accountId: String): Flow<Result<Boolean>>
-    suspend fun getTotalBalance(userId: String): Flow<Result<Double>>
+    // FIX: Removed userId.
+    suspend fun getTotalBalance(): Flow<Result<Double>>
 }
 
 /**
@@ -23,19 +26,20 @@ class AccountsRepositoryImpl(
     private val apiService: AccountsApiService
 ) : AccountsRepository {
 
-    override suspend fun getUserAccounts(userId: String): Flow<Result<List<Account>>> = flow {
-        emit(apiService.getUserAccounts(userId))
+    // FIX: Signature now correctly matches the updated interface.
+    override suspend fun getUserAccounts(): Flow<Result<List<Account>>> = flow {
+        emit(apiService.getUserAccounts())
     }
 
     override suspend fun getAccountById(accountId: String): Flow<Result<Account>> = flow {
         emit(apiService.getAccountById(accountId))
     }
 
+    // FIX: Signature now matches the interface, syntax error is fixed, and call is correct.
     override suspend fun createAccount(
-        userId: String,
         request: CreateAccountRequest
     ): Flow<Result<Account>> = flow {
-        emit(apiService.createAccount(userId, request))
+        emit(apiService.createAccount(request))
     }
 
     override suspend fun updateAccountBalance(
@@ -48,7 +52,8 @@ class AccountsRepositoryImpl(
         emit(apiService.deleteAccount(accountId))
     }
 
-    override suspend fun getTotalBalance(userId: String): Flow<Result<Double>> = flow {
-        emit(apiService.getTotalBalance(userId))
+    // FIX: Signature now correctly matches the updated interface.
+    override suspend fun getTotalBalance(): Flow<Result<Double>> = flow {
+        emit(apiService.getTotalBalance())
     }
 }

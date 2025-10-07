@@ -1,56 +1,80 @@
 package com.example.g_kash.authentication.data
 
-import android.content.SharedPreferences
 import android.util.Log
+import com.example.g_kash.accounts.data.Account
+import com.example.g_kash.accounts.data.AccountsApiResponse
+import com.example.g_kash.accounts.data.TotalBalanceResponse
 import com.example.g_kash.authentication.domain.AuthRepository
 import com.example.g_kash.data.SessionStorage
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.android.*
+import io.ktor.client.plugins.auth.Auth
+import io.ktor.client.plugins.auth.providers.BearerTokens
+import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
-import kotlin.text.clear
 
 // API Service
 interface ApiService {
     suspend fun createAccount(request: CreateAccountRequest): CreateAccountResponse
     suspend fun createPin(request: CreatePinRequest): CreatePinResponse
     suspend fun login(request: LoginRequest): LoginResponse
+
+    suspend fun getAccounts(): AccountsApiResponse
+    suspend fun getTotalBalance(): TotalBalanceResponse
 }
 
-class ApiServiceImpl(private val httpClient: HttpClient) : ApiService {
+class ApiServiceImpl(private val client: HttpClient) : ApiService {
     private val baseUrl = "https://gkash.onrender.com/api"
 
     override suspend fun createAccount(request: CreateAccountRequest): CreateAccountResponse {
-        return httpClient.post("$baseUrl/auth/signup") {
+        // FIX: Changed 'httpClient' to 'client'
+        return client.post("$baseUrl/auth/signup") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
     }
 
     override suspend fun createPin(request: CreatePinRequest): CreatePinResponse {
-        return httpClient.post("$baseUrl/auth/create-pin") {
+        // FIX: Changed 'httpClient' to 'client'
+        return client.post("$baseUrl/auth/create-pin") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
     }
 
     override suspend fun login(request: LoginRequest): LoginResponse {
-        return httpClient.post("$baseUrl/auth/login") {
+        // FIX: Changed 'httpClient' to 'client'
+        return client.post("$baseUrl/auth/login") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
     }
-}
 
+    override suspend fun getAccounts(): AccountsApiResponse {
+        return try {
+            client.get("/accounts/my-accounts").body<AccountsApiResponse>()
+        } catch (e: Exception) {
+            // FIX: Added parentheses to emptyList()
+            AccountsApiResponse(success = false, accounts = emptyList<Account>(), message = e.message)
+        }
+    }
+
+    override suspend fun getTotalBalance(): TotalBalanceResponse {
+        return try {
+            client.get("/wallet/balance").body<TotalBalanceResponse>()
+        } catch (e: Exception) {
+            TotalBalanceResponse(success = false, totalBalance = 0.0, message = e.message)
+        }
+    }
+}
 class AuthRepositoryImpl(
     private val apiService: ApiService,
     private val sessionStorage: SessionStorage
@@ -94,14 +118,20 @@ class AuthRepositoryImpl(
             val request = LoginRequest(phoneNumber, pin)
             val response = apiService.login(request)
 
-            if (response.success && response.token != null) {
-                // Save the token on successful login
-                sessionStorage.saveAuthToken(response.token)
-                Log.d("AuthFlow", "Token saved via SessionStorage.")
-                Result.success(response)
-            } else {
-                Result.failure(Exception(response.message ?: "Login failed"))
+            // Use .let to execute a block of code only if token and user are not null
+            if (response.success) {
+                val token = response.token
+                response.user?.let { user ->
+                    token?.let {
+                        sessionStorage.saveSession(token = it, userId = user.id)
+                        Log.d("AuthFlow", "Session saved (token & user ID).")
+                        return Result.success(response)
+                    }
+                }
             }
+
+            Result.failure(Exception(response.message ?: "Login failed: Incomplete data received"))
+
         } catch (e: Exception) {
             Log.e("AuthFlow", "Login exception", e)
             Result.failure(e)
@@ -117,8 +147,7 @@ class AuthRepositoryImpl(
 }
 
 
-// HTTP Client configuration
-fun createHttpClient(): HttpClient {
+fun createHttpClient(sessionStorage: SessionStorage): HttpClient {
     return HttpClient(Android) {
         install(ContentNegotiation) {
             json(Json {
@@ -131,6 +160,22 @@ fun createHttpClient(): HttpClient {
         install(Logging) {
             logger = Logger.DEFAULT
             level = LogLevel.INFO
+        }
+
+        // --- FIX: INSTALL THE AUTH PLUGIN ---
+        install(Auth) {
+            bearer {
+                // This block tells Ktor how to get the token for every request
+                loadTokens {
+                    // Read the token from our DataStore Flow
+                    val token = sessionStorage.authTokenStream.first()
+                    if (token != null) {
+                        BearerTokens(accessToken = token, refreshToken = "")
+                    } else {
+                        null
+                    }
+                }
+            }
         }
     }
 }
