@@ -20,6 +20,7 @@ import com.example.g_kash.authentication.presentation.AuthViewModel
 import com.example.g_kash.authentication.presentation.CreateAccountViewModel
 import com.example.g_kash.authentication.presentation.CreatePinViewModel
 import com.example.g_kash.authentication.presentation.UserViewModel
+import com.example.g_kash.core.presentation.FinancialLearningViewModel
 import com.example.g_kash.wallet.data.WalletRepository
 import com.example.g_kash.wallet.data.WalletRepositoryImpl
 import com.example.g_kash.wallet.presentation.WalletViewModel
@@ -125,6 +126,7 @@ val appModule = module {
     viewModel { CreateAccountViewModel(get()) }
     viewModel { CreatePinViewModel(get()) }
     viewModel { AccountsViewModel(get()) }
+    viewModel { FinancialLearningViewModel() }
 
     // The definition for WalletViewModel should also be here
     viewModel { params -> WalletViewModel(walletRepository = get(), userId = params.get()) }
