@@ -21,6 +21,13 @@ import com.example.g_kash.authentication.presentation.CreateAccountViewModel
 import com.example.g_kash.authentication.presentation.CreatePinViewModel
 import com.example.g_kash.authentication.presentation.UserViewModel
 import com.example.g_kash.core.presentation.FinancialLearningViewModel
+import com.example.g_kash.core.data.AlphaVantageApiService
+import com.example.g_kash.core.data.AlphaVantageApiServiceImpl
+import com.example.g_kash.core.domain.FinancialLearningRepository
+import com.example.g_kash.core.domain.FinancialLearningRepositoryImpl
+import com.example.g_kash.chat.presentation.ChatViewModel
+import com.example.g_kash.profile.presentation.ProfileViewModel
+import com.example.g_kash.accounts.data.AccountsApiService
 import com.example.g_kash.wallet.data.WalletRepository
 import com.example.g_kash.wallet.data.WalletRepositoryImpl
 import com.example.g_kash.wallet.presentation.WalletViewModel
@@ -36,6 +43,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 private const val API_BASE_URL = "https://gkash.onrender.com/api"
@@ -101,7 +109,31 @@ val networkModule = module {
         }
     }
 
+    // Separate HttpClient for Alpha Advantage API (no auth needed)
+    single<HttpClient>(qualifier = named("alpha_vantage")) {
+        HttpClient(Android) {
+            install(Logging) {
+                level = LogLevel.INFO
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        Log.d("AlphaVantageClient", message)
+                    }
+                }
+            }
+
+            install(ContentNegotiation) {
+                json(Json {
+                    prettyPrint = true
+                    isLenient = true
+                    ignoreUnknownKeys = true
+                })
+            }
+        }
+    }
+
     single<ApiService> { ApiServiceImpl(get()) }
+    single<AlphaVantageApiService> { AlphaVantageApiServiceImpl(get(named("alpha_vantage"))) }
+    single { AccountsApiService(get()) }
 }
 
 val appModule = module {
@@ -113,6 +145,7 @@ val appModule = module {
     single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
     single<AccountsRepository> { AccountsRepositoryImpl(get()) }
     single<WalletRepository> { WalletRepositoryImpl(get()) }
+    single<FinancialLearningRepository> { FinancialLearningRepositoryImpl(get()) }
 
 
 
@@ -126,7 +159,9 @@ val appModule = module {
     viewModel { CreateAccountViewModel(get()) }
     viewModel { CreatePinViewModel(get()) }
     viewModel { AccountsViewModel(get()) }
-    viewModel { FinancialLearningViewModel() }
+    viewModel { FinancialLearningViewModel(get()) }
+    viewModel { ChatViewModel() }
+    viewModel { ProfileViewModel() }
 
     // The definition for WalletViewModel should also be here
     viewModel { params -> WalletViewModel(walletRepository = get(), userId = params.get()) }

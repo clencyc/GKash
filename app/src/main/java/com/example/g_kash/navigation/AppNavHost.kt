@@ -24,6 +24,12 @@ import com.example.g_kash.accounts.presentation.AccountsScreen
 import com.example.g_kash.authentication.presentation.*
 import com.example.g_kash.core.presentation.LearnScreen
 import com.example.g_kash.core.presentation.ProfileScreen
+import com.example.g_kash.chat.presentation.ChatScreen
+import com.example.g_kash.profile.presentation.ProfileScreen as ActualProfileScreen
+import com.example.g_kash.core.presentation.LearningPathScreen
+import com.example.g_kash.authentication.presentation.ImprovedCreateAccountScreen
+import com.example.g_kash.authentication.presentation.ImprovedCreatePinScreen
+import com.example.g_kash.authentication.presentation.ImprovedConfirmPinScreen
 import com.example.g_kash.transactions.data.AccountTransactionsScreen
 import com.example.g_kash.wallet.presentation.WalletScreen
 import org.koin.androidx.compose.koinViewModel
@@ -86,8 +92,58 @@ fun AppNavigation() {
                     )
                 }
                 composable("auth/signup") {
-                    // TODO: Replace with your actual CreateAccountScreen
-                    GenericScreen(title = "Signup")
+                    ImprovedCreateAccountScreen(
+                        onNavigateToPin = { name, phone, idNumber ->
+                            navController.navigate("auth/create_pin/$name/$phone/$idNumber")
+                        },
+                        onNavigateToLogin = {
+                            navController.navigate("auth/login") {
+                                popUpTo("auth/signup") { inclusive = true }
+                            }
+                        },
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                
+                composable(
+                    route = "auth/create_pin/{name}/{phone}/{idNumber}",
+                    arguments = listOf(
+                        navArgument("name") { type = NavType.StringType },
+                        navArgument("phone") { type = NavType.StringType },
+                        navArgument("idNumber") { type = NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val name = backStackEntry.arguments?.getString("name") ?: ""
+                    val phone = backStackEntry.arguments?.getString("phone") ?: ""
+                    val idNumber = backStackEntry.arguments?.getString("idNumber") ?: ""
+                    
+                    ImprovedCreatePinScreen(
+                        userName = name,
+                        onPinCreated = { pin ->
+                            navController.navigate("auth/confirm_pin/$pin")
+                        },
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                
+                composable(
+                    route = "auth/confirm_pin/{originalPin}",
+                    arguments = listOf(navArgument("originalPin") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val originalPin = backStackEntry.arguments?.getString("originalPin") ?: ""
+                    
+                    ImprovedConfirmPinScreen(
+                        originalPin = originalPin,
+                        onPinConfirmed = {
+                            navController.navigate(Graph.MAIN) {
+                                popUpTo(Graph.AUTH) { inclusive = true }
+                            }
+                        },
+                        onPinMismatch = {
+                            // Pin mismatch handled in the screen itself
+                        },
+                        onNavigateBack = { navController.popBackStack() }
+                    )
                 }
             }
 
@@ -106,10 +162,16 @@ fun AppNavigation() {
                         userId = ""
                     )
                 }
-                composable(BottomNavItem.LEARN.route) { LearnScreen() }
-                composable(BottomNavItem.CHAT.route) { GenericScreen(title = "Chatbot") }
+                composable(BottomNavItem.LEARN.route) { 
+                    LearnScreen(
+                        onNavigateToLearningPath = { categoryId ->
+                            navController.navigate("learning_path/$categoryId")
+                        }
+                    )
+                }
+                composable(BottomNavItem.CHAT.route) { ChatScreen() }
                 composable(BottomNavItem.PROFILE.route) {
-                    ProfileScreen(
+                    ActualProfileScreen(
                         onLogout = {
                             navController.navigate(Graph.AUTH) {
                                 popUpTo(Graph.MAIN) { inclusive = true }
@@ -151,6 +213,17 @@ fun AppNavigation() {
                         onTransactionClick = { transactionId ->
                             // TODO: navController.navigate("transaction_details/$transactionId")
                         }
+                    )
+                }
+                
+                composable(
+                    route = "learning_path/{categoryId}",
+                    arguments = listOf(navArgument("categoryId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val categoryId = backStackEntry.arguments?.getString("categoryId") ?: ""
+                    LearningPathScreen(
+                        categoryId = categoryId,
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
             }

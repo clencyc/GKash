@@ -1,52 +1,63 @@
 package com.example.g_kash.core.data
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import androidx.compose.ui.graphics.vector.ImageVector
 
-// Data Models
+// Data Models for Alpha Vantage API
+@Serializable
 data class AlphaVantageQuote(
-    @SerializedName("Global Quote") val globalQuote: GlobalQuote?
+    @SerialName("Global Quote") val globalQuote: GlobalQuote?
 )
 
+@Serializable
 data class GlobalQuote(
-    @SerializedName("01. symbol") val symbol: String,
-    @SerializedName("05. price") val price: String,
-    @SerializedName("09. change") val change: String,
-    @SerializedName("10. change percent") val changePercent: String
+    @SerialName("01. symbol") val symbol: String,
+    @SerialName("05. price") val price: String,
+    @SerialName("09. change") val change: String,
+    @SerialName("10. change percent") val changePercent: String
 )
 
+@Serializable
 data class AlphaVantageTimeSeriesDaily(
-    @SerializedName("Meta Data") val metaData: MetaData?,
-    @SerializedName("Time Series (Daily)") val timeSeries: Map<String, DailyData>?
+    @SerialName("Meta Data") val metaData: MetaData?,
+    @SerialName("Time Series (Daily)") val timeSeries: Map<String, DailyData>?
 )
 
+@Serializable
 data class MetaData(
-    @SerializedName("2. Symbol") val symbol: String,
-    @SerializedName("3. Last Refreshed") val lastRefreshed: String
+    @SerialName("2. Symbol") val symbol: String,
+    @SerialName("3. Last Refreshed") val lastRefreshed: String
 )
 
+@Serializable
 data class DailyData(
-    @SerializedName("1. open") val open: String,
-    @SerializedName("2. high") val high: String,
-    @SerializedName("3. low") val low: String,
-    @SerializedName("4. close") val close: String,
-    @SerializedName("5. volume") val volume: String
+    @SerialName("1. open") val open: String,
+    @SerialName("2. high") val high: String,
+    @SerialName("3. low") val low: String,
+    @SerialName("4. close") val close: String,
+    @SerialName("5. volume") val volume: String
 )
 
+@Serializable
 data class CurrencyExchangeRate(
-    @SerializedName("Realtime Currency Exchange Rate") val exchangeRate: ExchangeRateData?
+    @SerialName("Realtime Currency Exchange Rate") val exchangeRate: ExchangeRateData?
 )
 
+@Serializable
 data class ExchangeRateData(
-    @SerializedName("1. From_Currency Code") val fromCurrency: String,
-    @SerializedName("3. To_Currency Code") val toCurrency: String,
-    @SerializedName("5. Exchange Rate") val rate: String,
-    @SerializedName("6. Last Refreshed") val lastRefreshed: String
+    @SerialName("1. From_Currency Code") val fromCurrency: String,
+    @SerialName("3. To_Currency Code") val toCurrency: String,
+    @SerialName("5. Exchange Rate") val rate: String,
+    @SerialName("6. Last Refreshed") val lastRefreshed: String
 )
 
+// UI Models
 data class LearningCategory(
     val id: String,
     val title: String,
     val subtitle: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
+    val icon: ImageVector
 )
 
 data class StockEducationItem(
@@ -65,27 +76,15 @@ data class CurrencyLesson(
     val educationalNote: String
 )
 
-// API Service
-interface AlphaVantageApi {
-    @GET("query")
-    suspend fun getQuote(
-        @Query("function") function: String = "GLOBAL_QUOTE",
-        @Query("symbol") symbol: String,
-        @Query("apikey") apiKey: String
-    ): AlphaVantageQuote
+data class FinancialTip(
+    val title: String,
+    val description: String,
+    val category: String
+)
 
-    @GET("query")
-    suspend fun getTimeSeriesDaily(
-        @Query("function") function: String = "TIME_SERIES_DAILY",
-        @Query("symbol") symbol: String,
-        @Query("apikey") apiKey: String
-    ): AlphaVantageTimeSeriesDaily
-
-    @GET("query")
-    suspend fun getCurrencyExchange(
-        @Query("function") function: String = "CURRENCY_EXCHANGE_RATE",
-        @Query("from_currency") fromCurrency: String,
-        @Query("to_currency") toCurrency: String,
-        @Query("apikey") apiKey: String
-    ): CurrencyExchangeRate
-}
+data class MarketInsight(
+    val title: String,
+    val content: String,
+    val source: String,
+    val timestamp: String
+)
