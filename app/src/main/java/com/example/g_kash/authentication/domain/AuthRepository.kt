@@ -1,7 +1,7 @@
 package com.example.g_kash.authentication.domain
 
 import com.example.g_kash.authentication.data.AuthState
-import com.example.g_kash.authentication.data.CreateAccountResponse
+import com.example.g_kash.authentication.data.RegisterUserResponse
 import com.example.g_kash.authentication.data.CreatePinResponse
 import com.example.g_kash.authentication.data.LoginResponse
 import kotlinx.coroutines.flow.Flow
@@ -10,11 +10,11 @@ import kotlinx.coroutines.flow.Flow
 interface AuthRepository {
     fun getAuthTokenStream(): Flow<String?>
 
-    suspend fun createAccount(
+    suspend fun registerUser(
         name: String,
         phoneNumber: String,
         idNumber: String
-    ): Result<CreateAccountResponse>
+    ): Result<RegisterUserResponse>
 
     suspend fun createPin(
         userId: String,
@@ -35,12 +35,12 @@ class CreateAccountUseCase(private val repository: AuthRepository) {
         name: String,
         phoneNumber: String,
         idNumber: String
-    ): Result<CreateAccountResponse> {
+    ): Result<RegisterUserResponse> {
         if (name.isBlank()) return Result.failure(Exception("Name is required"))
         if (phoneNumber.isBlank()) return Result.failure(Exception("Phone number is required"))
         if (idNumber.isBlank()) return Result.failure(Exception("ID number is required"))
 
-        return repository.createAccount(name, phoneNumber, idNumber)
+        return repository.registerUser(name, phoneNumber, idNumber)
     }
 }
 

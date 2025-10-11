@@ -15,28 +15,32 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Custom color palette for financial app
+// Pink Accent Theme - Dark Mode
 private val DarkColorScheme = darkColorScheme(
-    primary = GreenPrimary,
-    onPrimary = OnGreenPrimary,
-    primaryContainer = GreenPrimaryContainer,
-    onPrimaryContainer = OnGreenPrimaryContainer,
+    // Primary - Pink accent with high contrast for dark mode
+    primary = PinkPrimaryDark,              // #C11C84 - Dark Pink
+    onPrimary = OnPinkPrimaryDark,          // White
+    primaryContainer = PinkPrimaryContainer, // Dark Pink Container
+    onPrimaryContainer = OnPinkPrimaryContainer,
     
-    secondary = BluePrimary,
-    onSecondary = OnBluePrimary,
-    secondaryContainer = BlueSecondaryContainer,
-    onSecondaryContainer = OnBlueSecondaryContainer,
+    // Secondary - Muted Gold (complementary to pink)
+    secondary = GoldSecondaryDark,          // Darker Gold for dark mode
+    onSecondary = OnGoldSecondaryDark,      // Black
+    secondaryContainer = GoldSecondaryContainer,
+    onSecondaryContainer = OnGoldSecondaryContainer,
     
+    // Tertiary - Keep yellow/amber for financial contexts
     tertiary = YellowAccent,
     onTertiary = OnYellowAccent,
     tertiaryContainer = YellowAccentContainer,
     onTertiaryContainer = OnYellowAccentContainer,
     
-    background = DarkBackground,
-    onBackground = OnDarkBackground,
-    surface = DarkSurface,
-    onSurface = OnDarkSurface,
-    surfaceVariant = DarkSurfaceVariant,
+    // Background - Charcoal #121212 for reduced eye strain
+    background = DarkBackground,            // #121212
+    onBackground = OnDarkBackground,        // White
+    surface = DarkSurface,                  // #1E1E1E - Dark Gray cards
+    onSurface = OnDarkSurface,              // Off-white #F5F5F5
+    surfaceVariant = DarkSurfaceVariant,    // Neutral dark gray
     onSurfaceVariant = OnDarkSurfaceVariant,
     
     error = ErrorColor,
@@ -48,26 +52,31 @@ private val DarkColorScheme = darkColorScheme(
     outlineVariant = OutlineVariantDark
 )
 
+// Pink Accent Theme - Light Mode
 private val LightColorScheme = lightColorScheme(
-    primary = GreenPrimary,
-    onPrimary = OnGreenPrimary,
-    primaryContainer = GreenPrimaryContainerLight,
-    onPrimaryContainer = OnGreenPrimaryContainerLight,
+    // Primary - Vibrant Pink for light mode
+    primary = PinkPrimary,                  // #E91E63 - Vibrant Pink
+    onPrimary = OnPinkPrimary,              // White
+    primaryContainer = PinkPrimaryContainerLight, // Light Pink Container
+    onPrimaryContainer = OnPinkPrimaryContainerLight,
     
-    secondary = BluePrimary,
-    onSecondary = OnBluePrimary,
-    secondaryContainer = BlueSecondaryContainerLight,
-    onSecondaryContainer = OnBlueSecondaryContainerLight,
+    // Secondary - Muted Gold (complementary to pink)
+    secondary = GoldSecondary,              // #EFBF04 - Muted Gold
+    onSecondary = OnGoldSecondary,          // Black
+    secondaryContainer = GoldSecondaryContainerLight,
+    onSecondaryContainer = OnGoldSecondaryContainerLight,
     
+    // Tertiary - Keep yellow/amber for financial contexts
     tertiary = YellowAccent,
     onTertiary = OnYellowAccent,
     tertiaryContainer = YellowAccentContainerLight,
     onTertiaryContainer = OnYellowAccentContainerLight,
     
-    background = LightBackground,
-    onBackground = OnLightBackground,
-    surface = LightSurface,
-    onSurface = OnLightSurface,
+    // Background - Pure white with enhanced contrast
+    background = LightBackground,           // #FFFFFF - Pure White
+    onBackground = OnLightBackground,       // Near Black #1C1B1F
+    surface = LightSurface,                 // Near White #FCFCFC
+    onSurface = OnLightSurface,             // Near Black
     surfaceVariant = LightSurfaceVariant,
     onSurfaceVariant = OnLightSurfaceVariant,
     
@@ -117,7 +126,7 @@ fun GKashTheme(
     )
 }
 
-// Custom theme for financial contexts (green-focused)
+// Alternative theme for financial contexts (green-focused)
 @Composable
 fun GKashFinancialTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -137,6 +146,38 @@ fun GKashFinancialTheme(
             secondary = FinancialBlue,
             tertiary = FinancialGold
         )
+    }
+
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        content = content
+    )
+}
+
+// Pink-focused theme for modern UI elements
+@Composable
+fun GKashPinkTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    val colorScheme = if (darkTheme) {
+        DarkColorScheme // Already configured with pink accent
+    } else {
+        LightColorScheme // Already configured with pink accent
+    }
+    
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            try {
+                val window = (view.context as Activity).window
+                window.statusBarColor = colorScheme.surface.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            } catch (e: Exception) {
+                // Handle gracefully if WindowCompat is not available
+            }
+        }
     }
 
     MaterialTheme(

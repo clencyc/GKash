@@ -32,6 +32,12 @@ import com.example.g_kash.authentication.presentation.ImprovedCreatePinScreen
 import com.example.g_kash.authentication.presentation.ImprovedConfirmPinScreen
 import com.example.g_kash.transactions.data.AccountTransactionsScreen
 import com.example.g_kash.wallet.presentation.WalletScreen
+import com.example.g_kash.goals.presentation.GoalsScreen
+import com.example.g_kash.groups.presentation.GroupsScreen
+import com.example.g_kash.investment.presentation.InvestmentSimulatorScreen
+import com.example.g_kash.leaderboard.presentation.LeaderboardScreen
+import com.example.g_kash.points.presentation.PointsStoreScreen
+import com.example.g_kash.points.presentation.EnhancedProfileScreen
 import org.koin.androidx.compose.koinViewModel
 
 // Main navigation setup for the entire application
@@ -43,10 +49,11 @@ fun AppNavigation() {
 
     // Screens that should show the bottom bar.
     val bottomBarScreens = listOf(
-        BottomNavItem.HOME.route,
-        BottomNavItem.LEARN.route,
-        BottomNavItem.CHAT.route,
-        BottomNavItem.PROFILE.route,
+        "main/home",
+        "main/learn",
+        "main/investment_simulator",
+        "main/chat",
+        "main/profile",
     )
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -55,7 +62,7 @@ fun AppNavigation() {
     Scaffold(
         bottomBar = {
             if (shouldShowBottomBar) {
-                BottomNavigationBar(navController = navController)
+                CustomBottomNavBar(navController = navController)
             }
         }
     ) { innerPadding ->
@@ -149,34 +156,64 @@ fun AppNavigation() {
 
             // --- MAIN APP GRAPH (now part of the single NavHost) ---
             navigation(
-                startDestination = BottomNavItem.HOME.route,
+                startDestination = "main/home",
                 route = Graph.MAIN
             ) {
                 // Bottom Bar Screens
-                composable(BottomNavItem.HOME.route) {
+                composable("main/home") {
                     WalletScreen(
                         onNavigateToAccounts = { navController.navigate("accounts") },
                         onNavigateToAccountDetails = { accountId -> navController.navigate("account_details/$accountId") },
-                        //TODO: Remove these once WalletScreen is updated
                         onNavigateToTransactionHistory = {},
                         userId = ""
                     )
                 }
-                composable(BottomNavItem.LEARN.route) { 
+                
+                composable("main/learn") {
                     LearnScreen(
                         onNavigateToLearningPath = { categoryId ->
                             navController.navigate("learning_path/$categoryId")
                         }
                     )
                 }
-                composable(BottomNavItem.CHAT.route) { ChatScreen() }
-                composable(BottomNavItem.PROFILE.route) {
-                    ActualProfileScreen(
+                
+                composable("main/investment_simulator") {
+                    InvestmentSimulatorScreen()
+                }
+                
+                composable("main/chat") {
+                    ChatScreen()
+                }
+                
+                composable("main/profile") {
+                    EnhancedProfileScreen(
                         onLogout = {
                             navController.navigate(Graph.AUTH) {
                                 popUpTo(Graph.MAIN) { inclusive = true }
                             }
+                        },
+                        onNavigateToPointsStore = {
+                            navController.navigate("main/points_store")
                         }
+                    )
+                }
+                
+                // Additional screens - accessible but not in main bottom bar
+                composable("main/goals") {
+                    GoalsScreen()
+                }
+                
+                composable("main/groups") {
+                    GroupsScreen()
+                }
+                
+                composable("main/leaderboard") {
+                    LeaderboardScreen()
+                }
+                
+                composable("main/points_store") {
+                    PointsStoreScreen(
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
 
@@ -231,43 +268,6 @@ fun AppNavigation() {
     }
 }
 
-// This composable builds the bottom bar.
-@Composable
-fun BottomNavigationBar(navController: NavHostController) {
-    val screens = listOf(
-        BottomNavItem.HOME,
-        BottomNavItem.LEARN,
-        BottomNavItem.CHAT,
-        BottomNavItem.PROFILE
-    )
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-
-    NavigationBar {
-        screens.forEach { screen ->
-            val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-            NavigationBarItem(
-                label = { Text(screen.label) },
-                icon = {
-                    Icon(
-                        imageVector = if (isSelected) screen.selectedIcon else screen.unselectedIcon,
-                        contentDescription = screen.label
-                    )
-                },
-                selected = isSelected,
-                onClick = {
-                    navController.navigate(screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            )
-        }
-    }
-}
 
 
 // --- REMOVE MainAppScaffold() ENTIRELY ---

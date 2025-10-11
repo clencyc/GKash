@@ -26,11 +26,17 @@ import com.example.g_kash.core.data.AlphaVantageApiServiceImpl
 import com.example.g_kash.core.domain.FinancialLearningRepository
 import com.example.g_kash.core.domain.FinancialLearningRepositoryImpl
 import com.example.g_kash.chat.presentation.ChatViewModel
+import com.example.g_kash.chat.data.ChatBotApiService
+import com.example.g_kash.chat.data.ChatBotRepositoryImpl
+import com.example.g_kash.chat.domain.ChatBotRepository
 import com.example.g_kash.profile.presentation.ProfileViewModel
 import com.example.g_kash.accounts.data.AccountsApiService
 import com.example.g_kash.wallet.data.WalletRepository
 import com.example.g_kash.wallet.data.WalletRepositoryImpl
 import com.example.g_kash.wallet.presentation.WalletViewModel
+import com.example.g_kash.points.domain.*
+import com.example.g_kash.points.data.MockPointsRepository
+import com.example.g_kash.points.presentation.PointsViewModel
 import io.ktor.client.engine.android.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
@@ -100,8 +106,8 @@ val networkModule = module {
                         // This block is triggered when a 401 is received.
                         Log.d("KtorAuth", "Received 401. Token might be expired or invalid.")
                         // Here you would normally call your refresh token API endpoint.
-                        // For now, if refresh fails (or isn't implemented), we clear the token.
-                        sessionStorage.clearAuthToken()
+                        // For now, if refresh fails (or isn't implemented), we clear the session.
+                        sessionStorage.clearSession()
                         null // Indicates refresh failed, stopping the retry.
                     }
                 }
@@ -134,6 +140,7 @@ val networkModule = module {
     single<ApiService> { ApiServiceImpl(get()) }
     single<AlphaVantageApiService> { AlphaVantageApiServiceImpl(get(named("alpha_vantage"))) }
     single { AccountsApiService(get()) }
+    single { ChatBotApiService(get()) }
 }
 
 val appModule = module {
@@ -146,12 +153,21 @@ val appModule = module {
     single<AccountsRepository> { AccountsRepositoryImpl(get()) }
     single<WalletRepository> { WalletRepositoryImpl(get()) }
     single<FinancialLearningRepository> { FinancialLearningRepositoryImpl(get()) }
-
-
+    single<ChatBotRepository> { ChatBotRepositoryImpl(get(), get()) }
+    single<PointsRepository> { MockPointsRepository() }
 
     factory { CreateAccountUseCase(get()) }
     factory { CreatePinUseCase(get()) }
     factory { LoginUseCase(get()) }
+    
+    // Points system use cases
+    factory { GetUserPointsUseCase(get()) }
+    factory { CompleteModuleUseCase(get()) }
+    factory { PurchaseStockUseCase(get()) }
+    factory { GetAvailableStocksUseCase(get()) }
+    factory { GetLearningProgressUseCase(get()) }
+    factory { GetPointsHistoryUseCase(get()) }
+    factory { GetUserStockPurchasesUseCase(get()) }
 
     // YOUR VIEWMODELS
     viewModel { AuthViewModel(get()) }
@@ -160,8 +176,9 @@ val appModule = module {
     viewModel { CreatePinViewModel(get()) }
     viewModel { AccountsViewModel(get()) }
     viewModel { FinancialLearningViewModel(get()) }
-    viewModel { ChatViewModel() }
+    viewModel { ChatViewModel(get()) }
     viewModel { ProfileViewModel() }
+    viewModel { PointsViewModel(get(), get(), get(), get(), get(), get(), get()) }
 
     // The definition for WalletViewModel should also be here
     viewModel { params -> WalletViewModel(walletRepository = get(), userId = params.get()) }

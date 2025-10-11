@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 // Create a DataStore instance at the top level of your file
@@ -48,6 +49,29 @@ class SessionStorage(private val context: Context) {
     suspend fun clearAuthToken() {
         context.dataStore.edit { preferences ->
             preferences.remove(AUTH_TOKEN_KEY)
+        }
+    }
+    
+    // Function to clear all session data (token and user ID)
+    suspend fun clearSession() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(AUTH_TOKEN_KEY)
+            preferences.remove(USER_ID_KEY)
+        }
+        android.util.Log.d("SessionStorage", "Session cleared")
+    }
+    
+    // Debug function to log current session state
+    suspend fun logCurrentSession(tag: String = "SessionStorage") {
+        try {
+            val token = authTokenStream.first()
+            val userId = userIdStream.first()
+            android.util.Log.d(tag, "=== SESSION STATE ===")
+            android.util.Log.d(tag, "Token: ${if (token != null) "Present (${token.substring(0, minOf(10, token.length))}...)" else "NULL"}")
+            android.util.Log.d(tag, "User ID: ${userId ?: "NULL"}")
+            android.util.Log.d(tag, "====================")
+        } catch (e: Exception) {
+            android.util.Log.e(tag, "Error reading session state", e)
         }
     }
 }

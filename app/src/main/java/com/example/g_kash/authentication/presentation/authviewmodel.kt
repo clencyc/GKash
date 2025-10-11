@@ -1,5 +1,6 @@
 package com.example.g_kash.authentication.presentation
 
+import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -96,14 +97,9 @@ class CreateAccountViewModel(
             ).fold(
                 onSuccess = { response ->
                     _uiState.value = _uiState.value.copy(isLoading = false)
-                    if (response.success && response.userId != null) {
-                        currentUserId = response.userId
-                        _events.emit(AuthEvent.NavigateToPin)
-                    } else {
-                        _uiState.value = _uiState.value.copy(
-                            error = response.message
-                        )
-                    }
+                    Log.d("CreateAccount", "User registration response: userId=${response.user_id}, hasTempToken=${response.temp_token.isNotEmpty()}")
+                    currentUserId = response.user_id
+                    _events.emit(AuthEvent.NavigateToPin)
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
@@ -190,11 +186,8 @@ class ConfirmPinViewModel(
             createPinUseCase(userIdValue, originalPinValue).fold(
                 onSuccess = { response ->
                     _uiState.value = _uiState.value.copy(isLoading = false)
-                    if (response.success) {
-                        _events.emit(AuthEvent.NavigateToApp)
-                    } else {
-                        _uiState.value = _uiState.value.copy(error = response.message)
-                    }
+                    Log.d("CreatePin", "PIN creation response: hasToken=${response.token.isNotEmpty()}")
+                    _events.emit(AuthEvent.NavigateToApp)
                 },
                 onFailure = { error ->
                     _uiState.value = _uiState.value.copy(
@@ -212,6 +205,20 @@ class ConfirmPinViewModel(
 class AuthViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
+    
+    init {
+        // Debug logging on startup
+        viewModelScope.launch {
+            try {
+                val token = authRepository.getAuthTokenStream().first()
+                Log.d("AuthViewModel", "=== AUTH STARTUP DEBUG ===")
+                Log.d("AuthViewModel", "Token on startup: ${if (token != null) "Present (${token.take(10)}...)" else "NULL"}")
+                Log.d("AuthViewModel", "============================")
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error checking startup auth state", e)
+            }
+        }
+    }
 
     // No more _authState or loadAuthState()!
 

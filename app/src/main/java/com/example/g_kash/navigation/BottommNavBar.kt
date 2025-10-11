@@ -1,14 +1,8 @@
 package com.example.g_kash.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.outlined.Chat
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.graphics.vector.ImageVector
 
 
@@ -19,24 +13,24 @@ enum class BottomNavItem(
     val unselectedIcon: ImageVector,
     val route: String
 ) {
-    // The Wallet screen is now the Home screen
-    HOME(
-        route = "main/home", // Using a prefix is good practice
-        label = "Home",
-        selectedIcon = Icons.Filled.Home,
-        unselectedIcon = Icons.Outlined.Home
+    GOALS(
+        route = "main/goals",
+        label = "Goals",
+        selectedIcon = Icons.Filled.TrackChanges,
+        unselectedIcon = Icons.Outlined.TrackChanges
     ),
-    LEARN(
-        route = "main/learn",
-        label = "Learn",
-        selectedIcon = Icons.Filled.School,
-        unselectedIcon = Icons.Outlined.School
+    GROUPS(
+        route = "main/groups",
+        label = "Groups",
+        selectedIcon = Icons.Filled.Group,
+        unselectedIcon = Icons.Outlined.Group
     ),
-    CHAT(
-        route = "main/chat",
-        label = "Chat",
-        selectedIcon = Icons.Filled.Chat,
-        unselectedIcon = Icons.Outlined.Chat
+    // Investment Simulator will be handled separately as the center button
+    LEADERBOARD(
+        route = "main/leaderboard",
+        label = "LeaderBoard",
+        selectedIcon = Icons.Filled.Leaderboard,
+        unselectedIcon = Icons.Outlined.Leaderboard
     ),
     PROFILE(
         route = "main/profile",

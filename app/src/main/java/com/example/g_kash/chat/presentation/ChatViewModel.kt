@@ -2,6 +2,7 @@ package com.example.g_kash.chat.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.g_kash.chat.domain.ChatBotRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,59 +11,82 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-class ChatViewModel : ViewModel() {
+class ChatViewModel(
+    private val chatBotRepository: ChatBotRepository
+) : ViewModel() {
     
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
     
     private val dateFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
     
-    // Mock responses for financial questions
-    private val financialResponses = mapOf(
-        "budget" to "Here's a simple budgeting approach: Follow the 50/30/20 rule - 50% for needs (rent, food), 30% for wants (entertainment), and 20% for savings and debt repayment. Start by tracking your expenses for a month to see where your money goes!",
-        "emergency" to "A good emergency fund should cover 3-6 months of your essential expenses. Start small - even $500 can help with unexpected costs. Set up an automatic transfer of $50-100 per month to build this fund gradually.",
-        "invest" to "Start investing with these steps: 1) Pay off high-interest debt first, 2) Build your emergency fund, 3) Consider low-cost index funds or ETFs, 4) Start with what you can afford, even $25/month helps, 5) Use tax-advantaged accounts like retirement plans if available.",
-        "save" to "Top money-saving tips: 1) Cook at home more often, 2) Cancel unused subscriptions, 3) Use the 24-hour rule for purchases over $100, 4) Buy generic brands, 5) Negotiate bills (phone, insurance), 6) Set up automatic savings transfers.",
-        "credit" to "To improve your credit score: 1) Pay bills on time (most important factor), 2) Keep credit utilization below 30%, 3) Don't close old credit cards, 4) Check your credit report for errors, 5) Consider becoming an authorized user on someone else's account.",
-        "debt" to "For debt management: 1) List all debts with balances and interest rates, 2) Try the avalanche method (pay minimums on all, extra on highest interest), 3) Consider debt consolidation if it lowers your rate, 4) Create a strict budget to free up money for payments.",
-        "retirement" to "For retirement planning: 1) Start as early as possible (compound interest is powerful), 2) Contribute enough to get any employer match, 3) Aim to save 10-15% of income, 4) Use tax-advantaged accounts, 5) Increase contributions when you get raises.",
-        "insurance" to "Essential insurance types: 1) Health insurance (critical for medical costs), 2) Auto insurance (if you drive), 3) Renter's/homeowner's insurance, 4) Life insurance (if others depend on you), 5) Disability insurance (protects your income)."
-    )
     
     fun sendMessage(message: String) {
         if (message.isBlank()) return
         
         viewModelScope.launch {
-            // Add user message
-            val userMessage = ChatMessage(
-                id = UUID.randomUUID().toString(),
-                content = message,
-                isUser = true,
-                timestamp = dateFormatter.format(Date())
-            )
-            
-            _uiState.value = _uiState.value.copy(
-                messages = _uiState.value.messages + userMessage,
-                currentMessage = "",
-                isTyping = true
-            )
-            
-            // Simulate AI thinking time
-            delay(1000)
-            
-            // Generate AI response
-            val aiResponse = generateAIResponse(message)
-            val aiMessage = ChatMessage(
-                id = UUID.randomUUID().toString(),
-                content = aiResponse,
-                isUser = false,
-                timestamp = dateFormatter.format(Date())
-            )
-            
-            _uiState.value = _uiState.value.copy(
-                messages = _uiState.value.messages + aiMessage,
-                isTyping = false
-            )
+            try {
+                // Add user message
+                val userMessage = ChatMessage(
+                    id = UUID.randomUUID().toString(),
+                    content = message,
+                    isUser = true,
+                    timestamp = dateFormatter.format(Date())
+                )
+                
+                _uiState.value = _uiState.value.copy(
+                    messages = _uiState.value.messages + userMessage,
+                    currentMessage = "",
+                    isTyping = true,
+                    error = null
+                )
+                
+                // Call API to get response
+                val result = chatBotRepository.sendMessage(message)
+                
+                if (result.isSuccess) {
+                    val chatResponse = result.getOrThrow()
+                    val aiMessage = ChatMessage(
+                        id = UUID.randomUUID().toString(),
+                        content = chatResponse.response,
+                        isUser = false,
+                        timestamp = dateFormatter.format(Date())
+                    )
+                    
+                    _uiState.value = _uiState.value.copy(
+                        messages = _uiState.value.messages + aiMessage,
+                        isTyping = false
+                    )
+                } else {
+                    // Handle API error with fallback response
+                    val errorMessage = ChatMessage(
+                        id = UUID.randomUUID().toString(),
+                        content = getFallbackResponse(message),
+                        isUser = false,
+                        timestamp = dateFormatter.format(Date())
+                    )
+                    
+                    _uiState.value = _uiState.value.copy(
+                        messages = _uiState.value.messages + errorMessage,
+                        isTyping = false,
+                        error = "Connection issue - using offline response"
+                    )
+                }
+            } catch (e: Exception) {
+                // Handle unexpected errors
+                val errorMessage = ChatMessage(
+                    id = UUID.randomUUID().toString(),
+                    content = "I'm sorry, I'm having trouble connecting right now. Please try again later.",
+                    isUser = false,
+                    timestamp = dateFormatter.format(Date())
+                )
+                
+                _uiState.value = _uiState.value.copy(
+                    messages = _uiState.value.messages + errorMessage,
+                    isTyping = false,
+                    error = "Error: ${e.message}"
+                )
+            }
         }
     }
     
@@ -70,39 +94,69 @@ class ChatViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(currentMessage = message)
     }
     
-    private fun generateAIResponse(userMessage: String): String {
+    fun resetConversation() {
+        viewModelScope.launch {
+            try {
+                val result = chatBotRepository.resetConversation()
+                if (result.isSuccess) {
+                    _uiState.value = _uiState.value.copy(
+                        messages = emptyList(),
+                        error = null
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        error = "Failed to reset conversation"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Error resetting conversation: ${e.message}"
+                )
+            }
+        }
+    }
+    
+    fun deleteSession() {
+        viewModelScope.launch {
+            try {
+                val result = chatBotRepository.deleteSession()
+                if (result.isSuccess) {
+                    _uiState.value = _uiState.value.copy(
+                        messages = emptyList(),
+                        error = null
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        error = "Failed to delete session"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Error deleting session: ${e.message}"
+                )
+            }
+        }
+    }
+    
+    private fun getFallbackResponse(userMessage: String): String {
         val message = userMessage.lowercase()
         
+        // Simple fallback responses when API is unavailable
         return when {
             message.contains("budget") || message.contains("budgeting") -> {
-                financialResponses["budget"] ?: getDefaultResponse()
+                "Here's a simple budgeting approach: Follow the 50/30/20 rule - 50% for needs (rent, food), 30% for wants (entertainment), and 20% for savings and debt repayment. Start by tracking your expenses for a month to see where your money goes!"
             }
             message.contains("emergency") && message.contains("fund") -> {
-                financialResponses["emergency"] ?: getDefaultResponse()
+                "A good emergency fund should cover 3-6 months of your essential expenses. Start small - even $500 can help with unexpected costs. Set up an automatic transfer of $50-100 per month to build this fund gradually."
             }
             message.contains("invest") || message.contains("investment") -> {
-                financialResponses["invest"] ?: getDefaultResponse()
-            }
-            message.contains("save") || message.contains("saving") -> {
-                financialResponses["save"] ?: getDefaultResponse()
-            }
-            message.contains("credit") && message.contains("score") -> {
-                financialResponses["credit"] ?: getDefaultResponse()
-            }
-            message.contains("debt") -> {
-                financialResponses["debt"] ?: getDefaultResponse()
-            }
-            message.contains("retirement") -> {
-                financialResponses["retirement"] ?: getDefaultResponse()
-            }
-            message.contains("insurance") -> {
-                financialResponses["insurance"] ?: getDefaultResponse()
+                "Start investing with these steps: 1) Pay off high-interest debt first, 2) Build your emergency fund, 3) Consider low-cost index funds or ETFs, 4) Start with what you can afford, even $25/month helps, 5) Use tax-advantaged accounts like retirement plans if available."
             }
             message.contains("hello") || message.contains("hi") -> {
-                "Hello! I'm your personal finance AI assistant. I'm here to help you with budgeting, saving, investing, debt management, and any other financial questions you might have. What would you like to know?"
+                "Hello! I'm your personal finance AI assistant. I'm currently running in offline mode, but I can still help with basic financial questions. What would you like to know?"
             }
             message.contains("thank") -> {
-                "You're welcome! I'm always here to help with your financial questions. Remember, small consistent steps lead to big financial improvements over time. Is there anything else you'd like to know?"
+                "You're welcome! I'm here to help with your financial questions. Please note I'm currently in offline mode with limited responses."
             }
             else -> getDefaultResponse()
         }

@@ -57,7 +57,10 @@ fun ChatScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         // Header
-        ChatHeader()
+        ChatHeader(
+            onResetConversation = viewModel::resetConversation,
+            onDeleteSession = viewModel::deleteSession
+        )
         
         // Messages List
         LazyColumn(
@@ -106,7 +109,11 @@ fun ChatScreen(
 }
 
 @Composable
-fun ChatHeader() {
+fun ChatHeader(
+    onResetConversation: () -> Unit = {},
+    onDeleteSession: () -> Unit = {}
+) {
+    var showMenu by remember { mutableStateOf(false) }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
@@ -162,12 +169,46 @@ fun ChatHeader() {
                 }
             }
             
-            IconButton(onClick = { /* Handle more options */ }) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More options",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Reset Conversation") },
+                        onClick = {
+                            onResetConversation()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Reset"
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete Session") },
+                        onClick = {
+                            onDeleteSession()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete"
+                            )
+                        }
+                    )
+                }
             }
         }
     }

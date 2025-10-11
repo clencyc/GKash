@@ -26,7 +26,7 @@ data class LearnScreenUiState(
 class FinancialLearningViewModel(
     private val repository: FinancialLearningRepository
 ) : ViewModel() {
-    
+
     private val _uiState = MutableStateFlow(LearnScreenUiState())
     val uiState: StateFlow<LearnScreenUiState> = _uiState.asStateFlow()
 
@@ -151,7 +151,6 @@ class FinancialLearningViewModel(
             }
         }
     }
-
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }

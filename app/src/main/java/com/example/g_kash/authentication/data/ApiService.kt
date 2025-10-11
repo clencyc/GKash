@@ -23,7 +23,7 @@ import kotlinx.serialization.json.Json
 
 // API Service
 interface ApiService {
-    suspend fun createAccount(request: CreateAccountRequest): CreateAccountResponse
+    suspend fun registerUser(request: RegisterUserRequest): RegisterUserResponse
     suspend fun createPin(request: CreatePinRequest): CreatePinResponse
     suspend fun login(request: LoginRequest): LoginResponse
 
@@ -34,16 +34,14 @@ interface ApiService {
 class ApiServiceImpl(private val client: HttpClient) : ApiService {
     private val baseUrl = "https://gkash.onrender.com/api"
 
-    override suspend fun createAccount(request: CreateAccountRequest): CreateAccountResponse {
-        // FIX: Changed 'httpClient' to 'client'
-        return client.post("$baseUrl/auth/signup") {
+    override suspend fun registerUser(request: RegisterUserRequest): RegisterUserResponse {
+        return client.post("$baseUrl/auth/register-user") {
             contentType(ContentType.Application.Json)
             setBody(request)
         }.body()
     }
 
     override suspend fun createPin(request: CreatePinRequest): CreatePinResponse {
-        // FIX: Changed 'httpClient' to 'client'
         return client.post("$baseUrl/auth/create-pin") {
             contentType(ContentType.Application.Json)
             setBody(request)
@@ -60,7 +58,7 @@ class ApiServiceImpl(private val client: HttpClient) : ApiService {
 
     override suspend fun getAccounts(): AccountsApiResponse {
         return try {
-            client.get("/accounts/my-accounts").body<AccountsApiResponse>()
+            client.get("$baseUrl/accounts").body<AccountsApiResponse>()
         } catch (e: Exception) {
             // FIX: Added parentheses to emptyList()
             AccountsApiResponse(success = false, accounts = emptyList<Account>(), message = e.message)
@@ -69,7 +67,7 @@ class ApiServiceImpl(private val client: HttpClient) : ApiService {
 
     override suspend fun getTotalBalance(): TotalBalanceResponse {
         return try {
-            client.get("/wallet/balance").body<TotalBalanceResponse>()
+            client.get("$baseUrl/wallet/balance").body<TotalBalanceResponse>()
         } catch (e: Exception) {
             TotalBalanceResponse(success = false, totalBalance = 0.0, message = e.message)
         }
@@ -85,30 +83,38 @@ class AuthRepositoryImpl(
         return sessionStorage.authTokenStream
     }
 
-    override suspend fun createAccount(
+    override suspend fun registerUser(
         name: String,
         phoneNumber: String,
         idNumber: String
-    ): Result<CreateAccountResponse> {
+    ): Result<RegisterUserResponse> {
         return try {
-            val request = CreateAccountRequest(name, phoneNumber, idNumber)
-            val response = apiService.createAccount(request)
-            // IMPORTANT: If your signup API returns a token, save it here!
-            // response.token?.let { sessionStorage.saveAuthToken(it) }
+            val request = RegisterUserRequest(name, phoneNumber, idNumber)
+            val response = apiService.registerUser(request)
+            
+            // Save temp token if provided by the API
+            sessionStorage.saveAuthToken(response.temp_token)
+            Log.d("AuthFlow", "Temp token saved after user registration")
+            
             Result.success(response)
         } catch (e: Exception) {
+            Log.e("AuthFlow", "Register user error", e)
             Result.failure(e)
         }
     }
 
     override suspend fun createPin(userId: String, pin: String): Result<CreatePinResponse> {
         return try {
-            val request = CreatePinRequest(userId, pin)
+            val request = CreatePinRequest(pin)
             val response = apiService.createPin(request)
-            // IMPORTANT: If your create-pin API returns a token, save it here!
-            // response.token?.let { sessionStorage.saveAuthToken(it) }
+            
+            // Save token and user data if provided by the API
+            sessionStorage.saveSession(token = response.token, userId = response.user.user_nationalId)
+            Log.d("AuthFlow", "Token saved after PIN creation")
+            
             Result.success(response)
         } catch (e: Exception) {
+            Log.e("AuthFlow", "Create PIN error", e)
             Result.failure(e)
         }
     }
@@ -123,7 +129,7 @@ class AuthRepositoryImpl(
                 val token = response.token
                 response.user?.let { user ->
                     token?.let {
-                        sessionStorage.saveSession(token = it, userId = user.id)
+                        sessionStorage.saveSession(token = it, userId = user.user_nationalId)
                         Log.d("AuthFlow", "Session saved (token & user ID).")
                         return Result.success(response)
                     }
@@ -139,9 +145,9 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun logout() {
-        // On logout, just clear the session storage.
+        // On logout, clear all session data (token and user ID).
         // The UI will react automatically because it's observing the token flow.
-        sessionStorage.clearAuthToken()
+        sessionStorage.clearSession()
         Log.d("AuthFlow", "User logged out, session cleared.")
     }
 }
@@ -169,11 +175,20 @@ fun createHttpClient(sessionStorage: SessionStorage): HttpClient {
                 loadTokens {
                     // Read the token from our DataStore Flow
                     val token = sessionStorage.authTokenStream.first()
+                    Log.d("AuthFlow", "Loading token for request: ${if (token != null) "Token found (${token.take(10)}...)" else "No token"}")
                     if (token != null) {
                         BearerTokens(accessToken = token, refreshToken = "")
                     } else {
                         null
                     }
+                }
+                
+                refreshTokens {
+                    // This block is triggered when a 401 is received.
+                    Log.d("AuthFlow", "Received 401. Token might be expired or invalid. Clearing session.")
+                    // For now, if refresh fails (or isn't implemented), we clear the session.
+                    sessionStorage.clearSession()
+                    null // Indicates refresh failed, stopping the retry.
                 }
             }
         }

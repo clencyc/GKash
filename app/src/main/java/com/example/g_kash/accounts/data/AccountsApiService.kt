@@ -10,22 +10,20 @@ import io.ktor.http.*
  */
 class AccountsApiService(
     private val client: HttpClient,
-    // FIX: Base URL should probably not include /api here if you add it in every call
-    private val baseUrl: String = "https://gkash.onrender.com"
+    // FIX: Base URL should probably not include /api here if you add it in every
+    private val baseUrl: String = "https://gkash.onrender.com/api"
 ) {
-
     /**
      * Corresponds to: GET /accounts
      * Fetches all accounts for the authenticated user (identified by auth token).
      */
     suspend fun getUserAccounts(): Result<List<Account>> {
         return try {
-            val response = client.get("$baseUrl/accounts") { // FIX: Removed /user/{userId}
+            val response = client.get("$baseUrl/accounts") {
                 contentType(ContentType.Application.Json)
             }
 
             if (response.status == HttpStatusCode.OK) {
-                // Assuming the API returns a JSON object like { "accounts": [...] }
                 val accountsResponse: AccountsListResponse = response.body()
                 Result.success(accountsResponse.accounts)
             } else {
@@ -42,7 +40,7 @@ class AccountsApiService(
      */
     suspend fun getAccountById(accountId: String): Result<Account> {
         return try {
-            val response = client.get("$baseUrl/accounts/$accountId") { // FIX: Corrected URL path
+            val response = client.get("$baseUrl/accounts/$accountId") {
                 contentType(ContentType.Application.Json)
             }
 
@@ -69,7 +67,7 @@ class AccountsApiService(
      */
     suspend fun createAccount(request: CreateAccountRequest): Result<Account> {
         return try {
-            val response = client.post("$baseUrl/accounts") { // FIX: Removed /user/{userId}
+            val response = client.post("$baseUrl/accounts") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }

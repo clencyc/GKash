@@ -3,39 +3,36 @@ package com.example.g_kash.authentication.data
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class CreateAccountRequest(
-    val name: String,
+data class RegisterUserRequest(
+    val user_name: String,
     val phoneNumber: String,
-    val idNumber: String
+    val user_nationalId: String
 )
 
 @Serializable
-data class CreateAccountResponse(
-    val success: Boolean,
+data class RegisterUserResponse(
     val message: String,
-    val userId: String? = null,
-    val data: UserData? = null
+    val temp_token: String,
+    val user_id: String
 )
 
 @Serializable
 data class UserData(
-    val id: String,
-    val name: String,
-    val phoneNumber: String,
-    val idNumber: String,
-    val createdAt: String
+    val user_nationalId: String,
+    val user_name: String,
+    val phoneNumber: String
 )
 
 @Serializable
 data class CreatePinRequest(
-    val userId: String,
-    val pin: String
+    val user_pin: String
 )
 
 @Serializable
 data class CreatePinResponse(
-    val success: Boolean,
-    val message: String
+    val message: String,
+    val token: String,
+    val user: UserData
 )
 
 @Serializable
