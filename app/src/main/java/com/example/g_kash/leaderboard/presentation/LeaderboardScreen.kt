@@ -60,7 +60,7 @@ fun LeaderboardScreen() {
                 modifier = Modifier.size(32.dp)
             )
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(

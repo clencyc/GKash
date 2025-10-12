@@ -16,10 +16,15 @@ import com.example.g_kash.authentication.data.createHttpClient
 import com.example.g_kash.authentication.domain.CreateAccountUseCase
 import com.example.g_kash.authentication.domain.CreatePinUseCase
 import com.example.g_kash.authentication.domain.LoginUseCase
+import com.example.g_kash.authentication.domain.RegisterWithIdUseCase
+import com.example.g_kash.authentication.domain.AddPhoneUseCase
+import com.example.g_kash.authentication.domain.CreatePinKycUseCase
+import com.example.g_kash.authentication.domain.LoginWithNationalIdUseCase
 import com.example.g_kash.authentication.presentation.AuthViewModel
 import com.example.g_kash.authentication.presentation.CreateAccountViewModel
 import com.example.g_kash.authentication.presentation.CreatePinViewModel
 import com.example.g_kash.authentication.presentation.UserViewModel
+import com.example.g_kash.authentication.presentation.KycViewModel
 import com.example.g_kash.core.presentation.FinancialLearningViewModel
 import com.example.g_kash.core.data.AlphaVantageApiService
 import com.example.g_kash.core.data.AlphaVantageApiServiceImpl
@@ -37,6 +42,7 @@ import com.example.g_kash.wallet.presentation.WalletViewModel
 import com.example.g_kash.points.domain.*
 import com.example.g_kash.points.data.MockPointsRepository
 import com.example.g_kash.points.presentation.PointsViewModel
+import com.example.g_kash.investment.presentation.InvestmentAccountCreationViewModel
 import io.ktor.client.engine.android.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
@@ -104,10 +110,26 @@ val networkModule = module {
 
                     refreshTokens {
                         // This block is triggered when a 401 is received.
-                        Log.d("KtorAuth", "Received 401. Token might be expired or invalid.")
-                        // Here you would normally call your refresh token API endpoint.
-                        // For now, if refresh fails (or isn't implemented), we clear the session.
-                        sessionStorage.clearSession()
+                        Log.w("KtorAuth", "Received 401 Unauthorized. Token might be expired or invalid.")
+                        
+                        try {
+                            // Log current session state for debugging
+                            sessionStorage.logCurrentSession("KtorAuth")
+                            
+                            // For now, we don't have a refresh token endpoint
+                            // In a production app, you would:
+                            // 1. Call refresh token API endpoint
+                            // 2. If successful, return new BearerTokens
+                            // 3. If failed, clear session and return null
+                            
+                            Log.w("KtorAuth", "No refresh token mechanism implemented. Clearing session.")
+                            sessionStorage.clearSession()
+                            
+                        } catch (e: Exception) {
+                            Log.e("KtorAuth", "Error during token refresh handling", e)
+                            sessionStorage.clearSession()
+                        }
+                        
                         null // Indicates refresh failed, stopping the retry.
                     }
                 }
@@ -141,6 +163,7 @@ val networkModule = module {
     single<AlphaVantageApiService> { AlphaVantageApiServiceImpl(get(named("alpha_vantage"))) }
     single { AccountsApiService(get()) }
     single { ChatBotApiService(get()) }
+    single<com.example.g_kash.otp.domain.OtpApiService> { com.example.g_kash.otp.data.OtpApiServiceImpl(get()) }
 }
 
 val appModule = module {
@@ -159,6 +182,16 @@ val appModule = module {
     factory { CreateAccountUseCase(get()) }
     factory { CreatePinUseCase(get()) }
     factory { LoginUseCase(get()) }
+    
+    // KYC Use Cases
+    factory { RegisterWithIdUseCase(get()) }
+    factory { AddPhoneUseCase(get()) }
+    factory { CreatePinKycUseCase(get()) }
+    factory { LoginWithNationalIdUseCase(get()) }
+    
+    // OTP Use Cases
+    factory { com.example.g_kash.otp.domain.SendOtpUseCase(get()) }
+    factory { com.example.g_kash.otp.domain.VerifyOtpUseCase(get()) }
     
     // Points system use cases
     factory { GetUserPointsUseCase(get()) }
@@ -179,6 +212,12 @@ val appModule = module {
     viewModel { ChatViewModel(get()) }
     viewModel { ProfileViewModel() }
     viewModel { PointsViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    
+    // KYC ViewModel
+    viewModel { KycViewModel(get(), get(), get(), get(), get(), get()) }
+
+    // Investment ViewModel
+    viewModel { InvestmentAccountCreationViewModel(get()) }
 
     // The definition for WalletViewModel should also be here
     viewModel { params -> WalletViewModel(walletRepository = get(), userId = params.get()) }

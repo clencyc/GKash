@@ -33,7 +33,7 @@ fun LearnScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1B3A))
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -62,8 +62,8 @@ fun LearnScreen(
             // Learning Categories Section
             Text(
                 text = "Learning Categories",
-                color = Color.White,
-                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
@@ -81,8 +81,8 @@ fun LearnScreen(
             if (uiState.stockEducation.isNotEmpty()) {
                 Text(
                     text = "Market Learning",
-                    color = Color.White,
-                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
@@ -105,8 +105,8 @@ fun LearnScreen(
             if (uiState.currencyLessons.isNotEmpty()) {
                 Text(
                     text = "Currency Education",
-                    color = Color.White,
-                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
@@ -122,8 +122,8 @@ fun LearnScreen(
             if (uiState.marketInsights.isNotEmpty()) {
                 Text(
                     text = "Market Insights",
-                    color = Color.White,
-                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
@@ -145,7 +145,7 @@ fun LearnScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = Color(0xFFFFD700))
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     }
     
@@ -162,14 +162,14 @@ fun LearnHeader() {
     Column {
         Text(
             text = "Learn & grow your Savings",
-            color = Color.White,
-            fontSize = 24.sp,
+            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
         Text(
             text = "Simple guides to save Smarter",
-            color = Color.Gray,
-            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 4.dp)
         )
     }
@@ -184,7 +184,7 @@ fun SearchBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                Color(0xFF2A2D5A),
+                MaterialTheme.colorScheme.surfaceVariant,
                 RoundedCornerShape(12.dp)
             )
             .padding(16.dp),
@@ -193,7 +193,7 @@ fun SearchBar(
         Icon(
             imageVector = Icons.Default.Search,
             contentDescription = "Search",
-            tint = Color.Gray,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
@@ -201,13 +201,16 @@ fun SearchBar(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            )
         ) { innerTextField ->
             if (searchQuery.isEmpty()) {
                 Text(
                     text = "Search: topics, Budgeting, Finance",
-                    color = Color.Gray,
-                    fontSize = 14.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
             innerTextField()
@@ -221,21 +224,23 @@ fun DailyTipCard(tip: FinancialTip) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFD700))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondary
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = "Daily Tip:",
-                color = Color.Black,
-                fontSize = 12.sp,
+                text = "Daily Tip",
+                color = MaterialTheme.colorScheme.onSecondary,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium
             )
             Text(
                 text = tip.title,
-                color = Color.Black,
-                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSecondary,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -253,7 +258,10 @@ fun LearningCategoryItem(
             .fillMaxWidth()
             .clickable { onClick() }
             .clip(RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2D5A))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -264,7 +272,7 @@ fun LearningCategoryItem(
             Icon(
                 imageVector = category.icon,
                 contentDescription = category.title,
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -273,21 +281,21 @@ fun LearningCategoryItem(
             ) {
                 Text(
                     text = category.title,
-                    color = Color.White,
-                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = category.subtitle,
-                    color = Color.Gray,
-                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
             Icon(
-                imageVector = Icons.Default.Search, // Use a right arrow icon if you have one
+                imageVector = Icons.Default.Search,
                 contentDescription = "Navigate",
-                tint = Color.Gray,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -300,7 +308,10 @@ fun StockEducationCard(stock: StockEducationItem) {
         modifier = Modifier
             .width(280.dp)
             .clip(RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2D5A))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -312,14 +323,15 @@ fun StockEducationCard(stock: StockEducationItem) {
             ) {
                 Text(
                     text = stock.symbol,
-                    color = Color.White,
-                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "$${stock.price}",
-                    color = Color.White,
-                    fontSize = 14.sp
+                    text = "KES ${stock.price}",
+                    color = MaterialTheme.colorScheme.secondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
             Row(
@@ -328,21 +340,27 @@ fun StockEducationCard(stock: StockEducationItem) {
             ) {
                 Text(
                     text = stock.changePercent,
-                    color = if (stock.change.startsWith("-")) Color.Red else Color.Green,
-                    fontSize = 12.sp
+                    color = if (stock.change.startsWith("-")) 
+                        MaterialTheme.colorScheme.error 
+                    else 
+                        MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stock.change,
-                    color = if (stock.change.startsWith("-")) Color.Red else Color.Green,
-                    fontSize = 12.sp
+                    color = if (stock.change.startsWith("-")) 
+                        MaterialTheme.colorScheme.error 
+                    else 
+                        MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stock.lesson,
-                color = Color.Gray,
-                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
                 lineHeight = 14.sp
             )
         }
@@ -355,7 +373,10 @@ fun CurrencyLessonCard(lesson: CurrencyLesson) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2D5A))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -366,27 +387,28 @@ fun CurrencyLessonCard(lesson: CurrencyLesson) {
             ) {
                 Text(
                     text = "${lesson.fromCurrency}/${lesson.toCurrency}",
-                    color = Color.White,
-                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = lesson.rate,
-                    color = Color.White,
-                    fontSize = 14.sp
+                    color = MaterialTheme.colorScheme.secondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
             Text(
                 text = "Updated: ${lesson.lastUpdated}",
-                color = Color.Gray,
-                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 4.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = lesson.educationalNote,
-                color = Color.Gray,
-                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
                 lineHeight = 16.sp
             )
         }
@@ -399,21 +421,24 @@ fun MarketInsightCard(insight: MarketInsight) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2D5A))
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
                 text = insight.title,
-                color = Color.White,
-                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = insight.content,
-                color = Color.Gray,
-                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
                 lineHeight = 16.sp,
                 modifier = Modifier.padding(top = 8.dp)
             )
@@ -425,13 +450,13 @@ fun MarketInsightCard(insight: MarketInsight) {
             ) {
                 Text(
                     text = insight.source,
-                    color = Color.Gray,
-                    fontSize = 10.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Text(
                     text = insight.timestamp,
-                    color = Color.Gray,
-                    fontSize = 10.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }

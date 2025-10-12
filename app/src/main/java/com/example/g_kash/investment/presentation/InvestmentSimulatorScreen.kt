@@ -19,8 +19,11 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.g_kash.ui.theme.PinkPrimary
+import com.example.g_kash.ui.theme.GoldSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,21 +87,46 @@ fun InvestmentSimulatorScreen() {
             item {
                 // Action Buttons
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
                         onClick = { /* Start Real Investment */ },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PinkPrimary,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Start Investing")
+                        Text(
+                            text = "Start Investing",
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                     
                     OutlinedButton(
                         onClick = { /* Learn More */ },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = PinkPrimary
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 1.dp,
+                            color = PinkPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Learn More")
+                        Text(
+                            text = "Learn More",
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
@@ -111,20 +139,24 @@ fun InvestmentAmountCard(
     selectedAmount: Int,
     onAmountSelected: (Int) -> Unit
 ) {
-    val amounts = listOf(500, 1000, 2500, 5000, 10000)
+    val amounts = listOf(1000, 5000, 10000, 25000, 50000)
     
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
             Text(
                 text = "Investment Amount",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 12.dp)
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
             
             Row(
@@ -134,9 +166,24 @@ fun InvestmentAmountCard(
                 amounts.forEach { amount ->
                     FilterChip(
                         onClick = { onAmountSelected(amount) },
-                        label = { Text("$${amount}") },
+                        label = { 
+                            Text(
+                                text = if (amount >= 1000) "${amount/1000}K" else "$amount",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center
+                            ) 
+                        },
                         selected = selectedAmount == amount,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PinkPrimary.copy(alpha = 0.15f),
+                            selectedLabelColor = PinkPrimary,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
                 }
             }
@@ -154,16 +201,20 @@ fun TimePeriodCard(
     
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
             Text(
                 text = "Investment Period",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 12.dp)
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
             
             Row(
@@ -173,9 +224,24 @@ fun TimePeriodCard(
                 periods.zip(periodLabels).forEach { (period, label) ->
                     FilterChip(
                         onClick = { onPeriodSelected(period) },
-                        label = { Text(label) },
+                        label = { 
+                            Text(
+                                text = label,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center
+                            ) 
+                        },
                         selected = selectedPeriod == period,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = GoldSecondary.copy(alpha = 0.15f),
+                            selectedLabelColor = GoldSecondary,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
                 }
             }
@@ -197,31 +263,46 @@ fun RiskLevelCard(
     
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
             Text(
                 text = "Risk Level",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 12.dp)
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 riskLevels.forEachIndexed { index, risk ->
                     FilterChip(
                         onClick = { onRiskSelected(risk) },
-                        label = { Text(risk) },
+                        label = { 
+                            Text(
+                                text = risk,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center
+                            ) 
+                        },
                         selected = selectedRisk == risk,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = riskColors[index].copy(alpha = 0.2f),
-                            selectedLabelColor = riskColors[index]
+                            selectedContainerColor = riskColors[index].copy(alpha = 0.15f),
+                            selectedLabelColor = riskColors[index],
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                 }
@@ -240,62 +321,70 @@ fun ResultsCard(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+            containerColor = PinkPrimary.copy(alpha = 0.1f)
+        ),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Estimated Portfolio Value",
                 fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             
             Text(
-                text = "$${String.format("%.2f", estimatedReturn)}",
+                text = "KES ${String.format("%,.0f", estimatedReturn)}",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = PinkPrimary
             )
             
             Text(
                 text = "after ${period} months",
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(top = 4.dp)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
             )
-            
-            Spacer(modifier = Modifier.height(16.dp))
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
                         text = "Initial",
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(bottom = 4.dp)
                     )
                     Text(
-                        text = "$${initialAmount}",
+                        text = "KES ${String.format("%,d", initialAmount)}",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
                         text = "Profit",
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(bottom = 4.dp)
                     )
                     Text(
-                        text = "+$${String.format("%.0f", estimatedReturn - initialAmount)}",
+                        text = "+KES ${String.format("%,.0f", estimatedReturn - initialAmount)}",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF4CAF50)

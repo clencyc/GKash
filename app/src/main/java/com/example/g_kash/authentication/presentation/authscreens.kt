@@ -272,6 +272,7 @@ fun ConfirmPinScreen(
 @Composable
 fun LoginScreen(
     onNavigateToSignup: () -> Unit,
+    onNavigateToKyc: () -> Unit = {},
     onLoginSuccess: () -> Unit,
     onNavigateBack: () -> Unit,
     authViewModel: AuthViewModel = koinViewModel()
@@ -414,8 +415,9 @@ fun LoginScreen(
 
                 TextButton(onClick = onNavigateToSignup) {
                     Text(
-                        text = "Don't have an account? Sign Up",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "New User? Create Account with KYC",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

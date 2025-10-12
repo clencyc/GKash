@@ -35,6 +35,7 @@ import com.example.g_kash.wallet.presentation.WalletScreen
 import com.example.g_kash.goals.presentation.GoalsScreen
 import com.example.g_kash.groups.presentation.GroupsScreen
 import com.example.g_kash.investment.presentation.InvestmentSimulatorScreen
+import com.example.g_kash.investment.presentation.InvestmentAccountCreationScreen
 import com.example.g_kash.leaderboard.presentation.LeaderboardScreen
 import com.example.g_kash.points.presentation.PointsStoreScreen
 import com.example.g_kash.points.presentation.EnhancedProfileScreen
@@ -89,7 +90,8 @@ fun AppNavigation() {
             ) {
                 composable("auth/login") {
                     LoginScreen(
-                        onNavigateToSignup = { navController.navigate("auth/signup") },
+                        onNavigateToSignup = { navController.navigate("auth/kyc") }, // Changed to KYC
+                        onNavigateToKyc = { navController.navigate("auth/kyc") },
                         onLoginSuccess = {
                             navController.navigate(Graph.MAIN) {
                                 popUpTo(Graph.AUTH) { inclusive = true }
@@ -98,6 +100,20 @@ fun AppNavigation() {
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
+                
+                // KYC Flow (Primary Signup Process)
+                composable("auth/kyc") {
+                    KycFlowScreen(
+                        onKycComplete = {
+                            // After KYC, go directly to main app since PIN is created in KYC flow
+                            navController.navigate(Graph.MAIN) {
+                                popUpTo(Graph.AUTH) { inclusive = true }
+                            }
+                        },
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                
                 composable("auth/signup") {
                     ImprovedCreateAccountScreen(
                         onNavigateToPin = { name, phone, idNumber ->
@@ -165,6 +181,7 @@ fun AppNavigation() {
                         onNavigateToAccounts = { navController.navigate("accounts") },
                         onNavigateToAccountDetails = { accountId -> navController.navigate("account_details/$accountId") },
                         onNavigateToTransactionHistory = {},
+                        onNavigateToInvestment = { navController.navigate("investment_account_creation") },
                         userId = ""
                     )
                 }
@@ -261,6 +278,17 @@ fun AppNavigation() {
                     LearningPathScreen(
                         categoryId = categoryId,
                         onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                
+                composable("investment_account_creation") {
+                    InvestmentAccountCreationScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onAccountCreated = {
+                            navController.navigate("main/home") {
+                                popUpTo("investment_account_creation") { inclusive = true }
+                            }
+                        }
                     )
                 }
             }

@@ -9,12 +9,14 @@ import com.example.g_kash.data.SessionStorage
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.android.*
+import io.ktor.client.request.forms.*
 import io.ktor.client.plugins.auth.Auth
 import io.ktor.client.plugins.auth.providers.BearerTokens
 import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
+import io.ktor.client.request.header
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.Flow
@@ -23,9 +25,16 @@ import kotlinx.serialization.json.Json
 
 // API Service
 interface ApiService {
+    // Original registration methods (keeping for backward compatibility)
     suspend fun registerUser(request: RegisterUserRequest): RegisterUserResponse
     suspend fun createPin(request: CreatePinRequest): CreatePinResponse
     suspend fun login(request: LoginRequest): LoginResponse
+
+    // New KYC methods
+    suspend fun registerWithId(idImageBytes: ByteArray, selfieBytes: ByteArray): KycIdUploadResponse
+    suspend fun addPhone(request: AddPhoneRequest, tempToken: String): AddPhoneResponse
+    suspend fun createPinKyc(request: CreatePinRequest, tempToken: String): CreatePinResponse
+    suspend fun loginKyc(request: LoginRequest): LoginResponse
 
     suspend fun getAccounts(): AccountsApiResponse
     suspend fun getTotalBalance(): TotalBalanceResponse
@@ -50,6 +59,46 @@ class ApiServiceImpl(private val client: HttpClient) : ApiService {
 
     override suspend fun login(request: LoginRequest): LoginResponse {
         // FIX: Changed 'httpClient' to 'client'
+        return client.post("$baseUrl/auth/login") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
+    }
+
+    // KYC Methods Implementation
+    override suspend fun registerWithId(idImageBytes: ByteArray, selfieBytes: ByteArray): KycIdUploadResponse {
+        return client.submitFormWithBinaryData(
+            url = "$baseUrl/auth/register-with-id",
+            formData = formData {
+                append("idImage", idImageBytes, Headers.build {
+                    append(HttpHeaders.ContentType, "image/jpeg")
+                    append(HttpHeaders.ContentDisposition, "filename=\"id.jpg\"")
+                })
+                append("selfie", selfieBytes, Headers.build {
+                    append(HttpHeaders.ContentType, "image/jpeg")
+                    append(HttpHeaders.ContentDisposition, "filename=\"selfie.jpg\"")
+                })
+            }
+        ).body()
+    }
+
+    override suspend fun addPhone(request: AddPhoneRequest, tempToken: String): AddPhoneResponse {
+        return client.post("$baseUrl/auth/add-phone") {
+            contentType(ContentType.Application.Json)
+            header(HttpHeaders.Authorization, "Bearer $tempToken")
+            setBody(request)
+        }.body()
+    }
+
+    override suspend fun createPinKyc(request: CreatePinRequest, tempToken: String): CreatePinResponse {
+        return client.post("$baseUrl/auth/create-pin") {
+            contentType(ContentType.Application.Json)
+            header(HttpHeaders.Authorization, "Bearer $tempToken")
+            setBody(request)
+        }.body()
+    }
+
+    override suspend fun loginKyc(request: LoginRequest): LoginResponse {
         return client.post("$baseUrl/auth/login") {
             contentType(ContentType.Application.Json)
             setBody(request)
@@ -121,22 +170,18 @@ class AuthRepositoryImpl(
 
     override suspend fun login(phoneNumber: String, pin: String): Result<LoginResponse> {
         return try {
+            // For backward compatibility, treat phoneNumber as nationalId for now
             val request = LoginRequest(phoneNumber, pin)
-            val response = apiService.login(request)
+            val response = apiService.loginKyc(request)
 
-            // Use .let to execute a block of code only if token and user are not null
+            // Handle the updated LoginResponse structure
             if (response.success) {
-                val token = response.token
-                response.user?.let { user ->
-                    token?.let {
-                        sessionStorage.saveSession(token = it, userId = user.user_nationalId)
-                        Log.d("AuthFlow", "Session saved (token & user ID).")
-                        return Result.success(response)
-                    }
-                }
+                sessionStorage.saveSession(token = response.token, userId = response.user.user_nationalId)
+                Log.d("AuthFlow", "Session saved (token & user ID).")
+                Result.success(response)
+            } else {
+                Result.failure(Exception(response.message))
             }
-
-            Result.failure(Exception(response.message ?: "Login failed: Incomplete data received"))
 
         } catch (e: Exception) {
             Log.e("AuthFlow", "Login exception", e)
@@ -149,6 +194,90 @@ class AuthRepositoryImpl(
         // The UI will react automatically because it's observing the token flow.
         sessionStorage.clearSession()
         Log.d("AuthFlow", "User logged out, session cleared.")
+    }
+
+    // KYC Methods Implementation
+    override suspend fun registerWithId(
+        idImageBytes: ByteArray,
+        selfieBytes: ByteArray
+    ): Result<KycIdUploadResponse> {
+        return try {
+            val response = apiService.registerWithId(idImageBytes, selfieBytes)
+            
+            // Save temp token for next steps
+            sessionStorage.saveAuthToken(response.temp_token)
+            Log.d("KYC", "Temp token saved after ID verification")
+            
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e("KYC", "Register with ID error", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun addPhone(phoneNumber: String): Result<AddPhoneResponse> {
+        return try {
+            val tempToken = sessionStorage.authTokenStream.first()
+                ?: return Result.failure(Exception("No temp token found"))
+            
+            val request = AddPhoneRequest(phoneNumber)
+            val response = apiService.addPhone(request, tempToken)
+            
+            Log.d("KYC", "Phone number added successfully")
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e("KYC", "Add phone error", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun createPinKyc(pin: String): Result<CreatePinResponse> {
+        return try {
+            val tempToken = sessionStorage.authTokenStream.first()
+                ?: return Result.failure(Exception("No temp token found"))
+            
+            val request = CreatePinRequest(pin)
+            val response = apiService.createPinKyc(request, tempToken)
+            
+            // Save final token and user data
+            sessionStorage.saveSession(token = response.token, userId = response.user.user_nationalId)
+            Log.d("KYC", "KYC registration completed, final token saved")
+            
+            // Validate token persistence by reading it back
+            kotlinx.coroutines.delay(500) // Small delay to ensure DataStore persistence
+            val savedToken = sessionStorage.authTokenStream.first()
+            if (savedToken == response.token) {
+                Log.d("KYC", "Token persistence validated successfully")
+            } else {
+                Log.w("KYC", "Token persistence validation failed. Expected: ${response.token.substring(0, 10)}..., Got: ${savedToken?.substring(0, 10) ?: "null"}...")
+            }
+            
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e("KYC", "Create PIN KYC error", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun loginWithNationalId(
+        nationalId: String,
+        pin: String
+    ): Result<LoginResponse> {
+        return try {
+            val request = LoginRequest(nationalId, pin)
+            val response = apiService.loginKyc(request)
+
+            if (response.success) {
+                sessionStorage.saveSession(token = response.token, userId = response.user.user_nationalId)
+                Log.d("KYC", "Login successful, session saved")
+                Result.success(response)
+            } else {
+                Result.failure(Exception(response.message))
+            }
+        } catch (e: Exception) {
+            Log.e("KYC", "Login with National ID error", e)
+            Result.failure(e)
+        }
     }
 }
 

@@ -249,6 +249,9 @@ fun ImprovedCreatePinScreen(
     userName: String,
     onPinCreated: (String) -> Unit,
     onNavigateBack: () -> Unit,
+    progress: Float = 0.67f,
+    stepText: String = "Step 4 of 6",
+    progressText: String = "67%",
     modifier: Modifier = Modifier
 ) {
     var pin by remember { mutableStateOf("") }
@@ -265,6 +268,33 @@ fun ImprovedCreatePinScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Progress indicator
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = Color(0xFFE0E4E7),
+            )
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stepText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = progressText,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
             // Header with logo - responsive size
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -403,6 +433,9 @@ fun ImprovedConfirmPinScreen(
     onPinConfirmed: () -> Unit,
     onPinMismatch: () -> Unit,
     onNavigateBack: () -> Unit,
+    progress: Float = 0.83f,
+    stepText: String = "Step 5 of 6",
+    progressText: String = "83%",
     modifier: Modifier = Modifier
 ) {
     var pin by remember { mutableStateOf("") }
@@ -441,6 +474,33 @@ fun ImprovedConfirmPinScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Progress indicator
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = Color(0xFFE0E4E7),
+            )
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stepText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = progressText,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
             // Header with logo - responsive size
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,

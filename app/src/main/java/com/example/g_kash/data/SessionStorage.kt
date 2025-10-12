@@ -32,17 +32,21 @@ class SessionStorage(private val context: Context) {
         }
 
     suspend fun saveSession(token: String, userId: String) {
+        android.util.Log.d("SessionStorage", "Saving session - Token: ${token.substring(0, minOf(10, token.length))}..., UserId: $userId")
         context.dataStore.edit { preferences ->
             preferences[AUTH_TOKEN_KEY] = token
             preferences[USER_ID_KEY] = userId
         }
+        android.util.Log.d("SessionStorage", "Session saved successfully")
     }
 
     // Function to save the auth token
     suspend fun saveAuthToken(token: String) {
+        android.util.Log.d("SessionStorage", "Saving auth token: ${token.substring(0, minOf(10, token.length))}...")
         context.dataStore.edit { preferences ->
             preferences[AUTH_TOKEN_KEY] = token
         }
+        android.util.Log.d("SessionStorage", "Auth token saved successfully")
     }
 
     // Function to clear the auth token (on logout)
