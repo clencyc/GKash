@@ -130,6 +130,12 @@ fun InvestmentSimulatorScreen() {
                     }
                 }
             }
+            
+            item {
+                // Investment Leaderboard
+                Spacer(modifier = Modifier.height(8.dp))
+                InvestmentLeaderboard()
+            }
         }
     }
 }
@@ -393,6 +399,231 @@ fun ResultsCard(
             }
         }
     }
+}
+
+// Leaderboard data class
+data class InvestmentLeader(
+    val rank: Int,
+    val anonymousName: String,
+    val investmentAmount: Double,
+    val returnAmount: Double,
+    val riskLevel: String
+)
+
+@Composable
+fun InvestmentLeaderboard() {
+    val leaderboardData = remember { generateLeaderboardData() }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Leaderboard,
+                    contentDescription = "Leaderboard",
+                    tint = GoldSecondary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Top Investors This Month",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Leaderboard header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Rank",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.weight(0.8f)
+                )
+                Text(
+                    text = "Investor",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.weight(2f)
+                )
+                Text(
+                    text = "Amount",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1.5f)
+                )
+                Text(
+                    text = "Returns",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1.5f)
+                )
+            }
+            
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                thickness = 1.dp,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+            
+            // Leaderboard items
+            leaderboardData.forEach { leader ->
+                LeaderboardItem(leader = leader)
+                if (leader.rank < leaderboardData.size) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Footer note
+            Text(
+                text = "🏆 Compete with other investors and climb the leaderboard!",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+fun LeaderboardItem(leader: InvestmentLeader) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Rank without medals
+        Box(
+            modifier = Modifier.weight(0.8f),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = "${leader.rank}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        
+        // Anonymous name without avatar
+        Column(
+            modifier = Modifier.weight(2f)
+        ) {
+            Text(
+                text = leader.anonymousName,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "${leader.riskLevel} Risk",
+                fontSize = 10.sp,
+                color = getRiskColor(leader.riskLevel),
+                fontWeight = FontWeight.Medium
+            )
+        }
+        
+        // Investment amount
+        Text(
+            text = "${formatAmount(leader.investmentAmount)}",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1.5f)
+        )
+        
+        // Return amount
+        Text(
+            text = "+${formatAmount(leader.returnAmount - leader.investmentAmount)}",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF4CAF50),
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1.5f)
+        )
+    }
+}
+
+private fun getRiskColor(riskLevel: String): Color {
+    return when (riskLevel) {
+        "Low" -> Color(0xFF4CAF50)
+        "Medium" -> Color(0xFFFF9800)
+        "High" -> Color(0xFFF44336)
+        else -> Color(0xFFFF9800)
+    }
+}
+
+private fun formatAmount(amount: Double): String {
+    return when {
+        amount >= 1000000 -> String.format("%.1fM", amount / 1000000)
+        amount >= 1000 -> String.format("%.0fK", amount / 1000)
+        else -> String.format("%.0f", amount)
+    }
+}
+
+private fun generateLeaderboardData(): List<InvestmentLeader> {
+    val anonymousNames = listOf(
+        "CryptoKing47", "WealthBuilder", "InvestorPro", "MoneyMaven", "CapitalGuru",
+        "ProfitHunter", "SmartTrader", "GrowthSeeker", "RiskTaker99", "FinanceWiz"
+    )
+    
+    val riskLevels = listOf("Low", "Medium", "High")
+    
+    return (1..10).map { rank ->
+        val baseAmount = when (rank) {
+            1 -> (80000..150000).random().toDouble()
+            in 2..3 -> (50000..80000).random().toDouble()
+            in 4..6 -> (25000..50000).random().toDouble()
+            else -> (5000..25000).random().toDouble()
+        }
+        
+        val riskLevel = riskLevels.random()
+        val returnMultiplier = when (riskLevel) {
+            "Low" -> 1.05 + Math.random() * 0.10  // 1.05 to 1.15
+            "Medium" -> 1.10 + Math.random() * 0.15  // 1.10 to 1.25
+            "High" -> 1.20 + Math.random() * 0.20  // 1.20 to 1.40
+            else -> 1.15
+        }
+        
+        InvestmentLeader(
+            rank = rank,
+            anonymousName = anonymousNames.random(),
+            investmentAmount = baseAmount,
+            returnAmount = baseAmount * returnMultiplier,
+            riskLevel = riskLevel
+        )
+    }.sortedByDescending { it.returnAmount - it.investmentAmount }
+        .mapIndexed { index, leader -> leader.copy(rank = index + 1) }
 }
 
 private fun calculateReturn(amount: Int, months: Int, risk: String): Double {

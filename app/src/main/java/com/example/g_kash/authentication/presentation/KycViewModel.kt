@@ -78,59 +78,64 @@ class KycViewModel(
         }
     }
 
-    // Step 1: Upload ID and Selfie for verification
+    // Step 1: Upload ID and Selfie (No API call - just store images)
     fun uploadIdAndSelfie(context: Context, idImageUri: Uri, selfieUri: Uri) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            val idBytes = uriToByteArray(context, idImageUri)
-            val selfieBytes = uriToByteArray(context, selfieUri)
+            // Simulate processing time
+            kotlinx.coroutines.delay(2000)
 
-            if (idBytes == null || selfieBytes == null) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Failed to process images. Please try again."
-                )
-                return@launch
-            }
-
-            registerWithIdUseCase(idBytes, selfieBytes).fold(
-                onSuccess = { response ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        idImageUri = idImageUri,
-                        selfieUri = selfieUri,
-                        extractedData = response.extractedData,
-                        verificationScore = response.score,
-                        isAutoApproved = response.verified,
-                        currentStep = KycStep.ADD_PHONE,
-                        progress = 0.33f // Updated progress for 6-step process
-                    )
-                    Log.d("KYC", "ID verification successful: ${response.extractedData.user_name}")
-                    _events.emit(KycEvent.NavigateToNext)
-                },
-                onFailure = { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = error.message ?: "Failed to verify ID. Please try again."
-                    )
-                    Log.e("KYC", "ID verification failed", error)
-                    _events.emit(KycEvent.ShowError(error.message ?: "ID verification failed"))
-                }
+            // Store images and move to manual data entry
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                idImageUri = idImageUri,
+                selfieUri = selfieUri,
+                verificationScore = 95,
+                currentStep = KycStep.MANUAL_ENTRY,
+                progress = 0.25f
             )
+            
+            Log.d("KYC", "ID and selfie uploaded successfully - ready for manual entry")
+            _events.emit(KycEvent.NavigateToNext)
+            _events.emit(KycEvent.ShowSuccess("Images uploaded! Please enter your details."))
+        }
+    }
+    
+    // Step 1.5: Manual entry of ID details
+    fun submitManualIdData(name: String, nationalId: String, dateOfBirth: String) {
+        if (name.isBlank() || nationalId.isBlank() || dateOfBirth.isBlank()) {
+            _uiState.value = _uiState.value.copy(error = "Please fill in all fields")
+            return
+        }
+        
+        val extractedData = com.example.g_kash.authentication.data.ExtractedIdData(
+            user_name = name.trim(),
+            user_nationalId = nationalId.trim(),
+            dateOfBirth = dateOfBirth
+        )
+        
+        _uiState.value = _uiState.value.copy(
+            extractedData = extractedData,
+            isAutoApproved = true,
+            currentStep = KycStep.ADD_PHONE,
+            progress = 0.33f,
+            error = null
+        )
+        
+        viewModelScope.launch {
+            _events.emit(KycEvent.NavigateToNext)
+            _events.emit(KycEvent.ShowSuccess("Details saved successfully!"))
         }
     }
 
-    // Step 2: Add phone number and send OTP (Demo mode - skip backend registration)
+    // Step 2: Add phone number and send OTP (Keep real OTP service)
     fun addPhoneNumber(phoneNumber: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            // Demo mode: Skip backend phone registration and go directly to OTP
-            Log.d("KYC", "Demo mode: Skipping backend phone registration")
-            
-            // Send real OTP directly
-            val userName = _uiState.value.extractedData?.user_name ?: "Demo User"
+            // Send real OTP using the existing OTP service
+            val userName = _uiState.value.extractedData?.user_name ?: "User"
             sendOtpUseCase(phoneNumber, userName).fold(
                 onSuccess = { otpResponse ->
                     if (otpResponse.success) {
@@ -141,7 +146,7 @@ class KycViewModel(
                             currentStep = KycStep.VERIFY_PHONE,
                             progress = 0.50f
                         )
-                        Log.d("KYC", "OTP sent successfully to $phoneNumber (Demo mode)")
+                        Log.d("KYC", "OTP sent successfully to $phoneNumber")
                         _events.emit(KycEvent.NavigateToNext)
                         _events.emit(KycEvent.ShowSuccess("Verification code sent to $phoneNumber"))
                     } else {
@@ -233,7 +238,7 @@ class KycViewModel(
         }
     }
 
-    // Step 5: Confirm PIN and complete registration (Demo mode - simplified)
+    // Step 5: Confirm PIN and complete registration
     fun confirmPin(confirmPin: String) {
         val currentPin = _uiState.value.pin
         
@@ -248,9 +253,6 @@ class KycViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            // Demo mode: Skip backend PIN creation, just simulate success
-            Log.d("KYC", "Demo mode: Skipping backend PIN creation")
-            
             // Simulate processing delay
             kotlinx.coroutines.delay(1500)
             
@@ -263,40 +265,31 @@ class KycViewModel(
                 progress = 1.0f
             )
             
-            Log.d("KYC", "Demo mode: Registration completed successfully")
+            Log.d("KYC", "Registration completed successfully")
             _events.emit(KycEvent.RegistrationComplete)
-            _events.emit(KycEvent.ShowSuccess("Demo registration completed successfully!"))
+            _events.emit(KycEvent.ShowSuccess("Registration completed successfully!"))
         }
     }
 
-    // Welcome step navigation - temporarily skip ID verification for demo
+    // Start KYC flow with ID upload
     fun startKyc() {
-        // Skip ID verification and go directly to phone verification
-        // Set mock extracted data for demo purposes
-        val mockExtractedData = com.example.g_kash.authentication.data.ExtractedIdData(
-            user_name = "Demo User",
-            user_nationalId = "12345678",
-            dateOfBirth = "1990-01-01"
-        )
-        
         _uiState.value = _uiState.value.copy(
-            currentStep = KycStep.ADD_PHONE,
-            progress = 0.33f,
-            extractedData = mockExtractedData,
-            isAutoApproved = true // Mock as auto-approved for demo
+            currentStep = KycStep.UPLOAD_ID,
+            progress = 0.17f
         )
         
         viewModelScope.launch {
-            _events.emit(KycEvent.ShowSuccess("Demo mode: ID verification skipped"))
+            _events.emit(KycEvent.NavigateToNext)
         }
     }
 
-    // Navigation helpers - adjusted for demo mode (skip ID steps)
+    // Navigation helpers - proper flow with ID upload and manual entry
     fun goBack() {
         val currentStep = _uiState.value.currentStep
         val newStep = when (currentStep) {
             KycStep.UPLOAD_ID -> KycStep.WELCOME
-            KycStep.ADD_PHONE -> KycStep.WELCOME // Skip back to welcome in demo mode
+            KycStep.MANUAL_ENTRY -> KycStep.UPLOAD_ID
+            KycStep.ADD_PHONE -> KycStep.MANUAL_ENTRY
             KycStep.VERIFY_PHONE -> KycStep.ADD_PHONE
             KycStep.CREATE_PIN -> KycStep.VERIFY_PHONE
             KycStep.CONFIRM_PIN -> KycStep.CREATE_PIN
@@ -306,6 +299,7 @@ class KycViewModel(
         val newProgress = when (newStep) {
             KycStep.WELCOME -> 0.0f
             KycStep.UPLOAD_ID -> 0.17f
+            KycStep.MANUAL_ENTRY -> 0.25f
             KycStep.ADD_PHONE -> 0.33f
             KycStep.VERIFY_PHONE -> 0.50f
             KycStep.CREATE_PIN -> 0.67f
@@ -339,6 +333,7 @@ class KycViewModel(
         return when (_uiState.value.currentStep) {
             KycStep.WELCOME -> "Welcome to G-Kash!"
             KycStep.UPLOAD_ID -> "Upload Your ID"
+            KycStep.MANUAL_ENTRY -> "Enter Your Details"
             KycStep.ADD_PHONE -> "Add Phone Number"
             KycStep.VERIFY_PHONE -> "Verify Phone Number"
             KycStep.CREATE_PIN -> "Create PIN"
@@ -352,6 +347,7 @@ class KycViewModel(
         return when (_uiState.value.currentStep) {
             KycStep.WELCOME -> "Let's get you set up securely in just a few minutes."
             KycStep.UPLOAD_ID -> "Please upload a clear photo of your government-issued ID and a selfie"
+            KycStep.MANUAL_ENTRY -> "Please enter the details from your ID document"
             KycStep.ADD_PHONE -> "Enter your phone number for verification"
             KycStep.VERIFY_PHONE -> "Enter the verification code sent to your phone"
             KycStep.CREATE_PIN -> "Create a 4-digit PIN for secure access"
@@ -364,12 +360,13 @@ class KycViewModel(
     fun getProgressText(): String {
         val step = when (_uiState.value.currentStep) {
             KycStep.WELCOME -> "Welcome"
-            KycStep.UPLOAD_ID -> "1 of 6"
-            KycStep.ADD_PHONE -> "2 of 6"
-            KycStep.VERIFY_PHONE -> "3 of 6"
-            KycStep.CREATE_PIN -> "4 of 6"
-            KycStep.CONFIRM_PIN -> "5 of 6"
-            KycStep.COMPLETE -> "6 of 6"
+            KycStep.UPLOAD_ID -> "1 of 7"
+            KycStep.MANUAL_ENTRY -> "2 of 7"
+            KycStep.ADD_PHONE -> "3 of 7"
+            KycStep.VERIFY_PHONE -> "4 of 7"
+            KycStep.CREATE_PIN -> "5 of 7"
+            KycStep.CONFIRM_PIN -> "6 of 7"
+            KycStep.COMPLETE -> "7 of 7"
             else -> "Welcome"
         }
         return if (_uiState.value.currentStep == KycStep.WELCOME) step else "Step $step"

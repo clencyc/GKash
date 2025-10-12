@@ -32,10 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
-// KYC Step Enum - Enhanced with Welcome step for Warp-style onboarding
+// KYC Step Enum - Enhanced with Manual Entry step
 enum class KycStep {
     WELCOME,
     UPLOAD_ID,
+    MANUAL_ENTRY,
     ADD_PHONE,
     VERIFY_PHONE, 
     CREATE_PIN,

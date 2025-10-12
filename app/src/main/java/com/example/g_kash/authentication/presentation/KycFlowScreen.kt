@@ -76,15 +76,30 @@ fun KycFlowScreen(
                 )
             }
             
-            // Skip UPLOAD_ID step in demo mode - it goes directly from WELCOME to ADD_PHONE
             KycStep.UPLOAD_ID -> {
-                // This should not be reached in demo mode, but keep for safety
                 KycUploadIdScreen(
                     onIdUploaded = { idUri, selfieUri ->
                         kycViewModel.uploadIdAndSelfie(context, idUri, selfieUri)
                     },
                     onNavigateBack = onNavigateBack,
                     isLoading = uiState.isLoading,
+                    progress = uiState.progress,
+                    stepText = kycViewModel.getProgressText(),
+                    progressText = kycViewModel.getProgressPercentage(),
+                    modifier = Modifier.padding(paddingValues)
+                )
+            }
+            
+            KycStep.MANUAL_ENTRY -> {
+                ManualIdEntryScreen(
+                    onDetailsEntered = { name, nationalId, dateOfBirth ->
+                        kycViewModel.submitManualIdData(name, nationalId, dateOfBirth)
+                    },
+                    onNavigateBack = {
+                        kycViewModel.goBack()
+                    },
+                    isLoading = uiState.isLoading,
+                    error = uiState.error,
                     progress = uiState.progress,
                     stepText = kycViewModel.getProgressText(),
                     progressText = kycViewModel.getProgressPercentage(),
