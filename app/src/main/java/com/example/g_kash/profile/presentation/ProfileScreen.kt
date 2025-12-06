@@ -76,23 +76,6 @@ fun ProfileScreen(
         }
         
         item {
-            Text(
-                text = "Support & Information",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
-        
-        items(getSupportOptions(onNavigateToHelp)) { option ->
-            SettingsOptionItem(
-                option = option,
-                onClick = option.onClick
-            )
-        }
-        
-        item {
             // App Theme Toggle
             AppThemeSection()
         }
@@ -607,39 +590,6 @@ fun getAccountSettingsOptions(
             subtitle = "Manage connected bank accounts",
             icon = Icons.Default.AccountBalance,
             onClick = { /* Navigate to linked accounts */ }
-        )
-    )
-}
-
-fun getSupportOptions(onNavigateToHelp: () -> Unit): List<SettingsOption> {
-    return listOf(
-        SettingsOption(
-            id = "help",
-            title = "Help & Support",
-            subtitle = "Get help with using the app",
-            icon = Icons.Default.Help,
-            onClick = onNavigateToHelp
-        ),
-        SettingsOption(
-            id = "feedback",
-            title = "Send Feedback",
-            subtitle = "Share your thoughts and suggestions",
-            icon = Icons.Default.Feedback,
-            onClick = { /* Handle feedback */ }
-        ),
-        SettingsOption(
-            id = "terms",
-            title = "Terms & Conditions",
-            subtitle = "Read our terms of service",
-            icon = Icons.Default.Article,
-            onClick = { /* Navigate to terms */ }
-        ),
-        SettingsOption(
-            id = "privacy",
-            title = "Privacy Policy",
-            subtitle = "How we handle your data",
-            icon = Icons.Default.PrivacyTip,
-            onClick = { /* Navigate to privacy policy */ }
         )
     )
 }

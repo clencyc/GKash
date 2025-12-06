@@ -214,7 +214,7 @@ val appModule = module {
     viewModel { PointsViewModel(get(), get(), get(), get(), get(), get(), get()) }
     
     // KYC ViewModel
-    viewModel { KycViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { KycViewModel(get(), get(), get(), get(), get(), get(), get()) }
 
     // Investment ViewModel
     viewModel { InvestmentAccountCreationViewModel(get()) }

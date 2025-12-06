@@ -73,6 +73,8 @@ dependencies {
     // Ktor Client Auth feature (Corrected version)
     implementation("io.ktor:ktor-client-auth:2.3.7")
 
+    implementation("com.google.accompanist:accompanist-pager:0.30.1")
+
     // Kotlinx Serialization (Choose ONE version, e.g., 1.6.0)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 

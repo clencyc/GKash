@@ -108,23 +108,6 @@ fun EnhancedProfileScreen(
         }
         
         item {
-            Text(
-                text = "Support & Information",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
-        
-        items(getSupportOptions(onNavigateToHelp)) { option ->
-            SettingsOptionItem(
-                option = option,
-                onClick = option.onClick
-            )
-        }
-        
-        item {
             // App Theme Toggle
             AppThemeSection()
         }

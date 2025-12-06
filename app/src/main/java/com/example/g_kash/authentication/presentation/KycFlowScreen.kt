@@ -1,8 +1,9 @@
 package com.example.g_kash.authentication.presentation
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,8 +13,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.g_kash.authentication.data.ExtractedIdData
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+
+enum class KycStep {
+    WELCOME,
+    UPLOAD_ID,
+    ADD_PHONE,
+    VERIFY_PHONE,
+    CREATE_PIN,
+    CONFIRM_PIN,
+    COMPLETE
+}
 
 /**
  * Main KYC Flow Screen that orchestrates the entire KYC process
@@ -24,8 +36,8 @@ import org.koin.androidx.compose.koinViewModel
 fun KycFlowScreen(
     onKycComplete: () -> Unit,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier,
-    kycViewModel: KycViewModel = koinViewModel()
+    kycViewModel: KycViewModel = koinViewModel(),
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val uiState by kycViewModel.uiState
@@ -36,6 +48,14 @@ fun KycFlowScreen(
     LaunchedEffect(kycViewModel) {
         kycViewModel.events.collect { event ->
             when (event) {
+                is KycEvent.NavigateToNext -> {
+                    // Let the ViewModel handle the step transition
+                    // The ViewModel already updates the currentStep in the state
+                    Log.d("KYC_UI", "NavigateToNext event received")
+                }
+                is KycEvent.NavigateBack -> {
+                    onNavigateBack()
+                }
                 is KycEvent.ShowError -> {
                     snackbarHostState.showSnackbar(
                         message = event.message,
@@ -55,11 +75,13 @@ fun KycFlowScreen(
                 is KycEvent.NavigateToLogin -> {
                     onKycComplete()
                 }
-                else -> {
-                    // Handle other navigation events if needed
-                }
             }
         }
+    }
+    
+    // Debug log current step
+    LaunchedEffect(uiState.currentStep) {
+        Log.d("KYC_UI", "Current step in UI: ${uiState.currentStep}")
     }
 
     Scaffold(
@@ -68,7 +90,7 @@ fun KycFlowScreen(
     ) { paddingValues ->
         when (uiState.currentStep) {
             KycStep.WELCOME -> {
-                WelcomeScreen(
+                OnboardingScreen(
                     onGetStarted = {
                         kycViewModel.startKyc()
                     },
@@ -83,75 +105,49 @@ fun KycFlowScreen(
                     },
                     onNavigateBack = onNavigateBack,
                     isLoading = uiState.isLoading,
-                    progress = uiState.progress,
-                    stepText = kycViewModel.getProgressText(),
-                    progressText = kycViewModel.getProgressPercentage(),
-                    modifier = Modifier.padding(paddingValues)
-                )
-            }
-            
-            KycStep.MANUAL_ENTRY -> {
-                ManualIdEntryScreen(
-                    onDetailsEntered = { name, nationalId, dateOfBirth ->
-                        kycViewModel.submitManualIdData(name, nationalId, dateOfBirth)
-                    },
-                    onNavigateBack = {
-                        kycViewModel.goBack()
-                    },
-                    isLoading = uiState.isLoading,
-                    error = uiState.error,
-                    progress = uiState.progress,
-                    stepText = kycViewModel.getProgressText(),
-                    progressText = kycViewModel.getProgressPercentage(),
                     modifier = Modifier.padding(paddingValues)
                 )
             }
             
             KycStep.ADD_PHONE -> {
-                KycPhoneVerificationScreen(
-                    onPhoneAdded = { phoneNumber ->
+                KycAddPhoneScreen(
+                    onPhoneAdded = { phoneNumber: String ->
                         kycViewModel.addPhoneNumber(phoneNumber)
                     },
                     onNavigateBack = {
                         kycViewModel.goBack()
                     },
                     isLoading = uiState.isLoading,
-                    progress = uiState.progress,
-                    stepText = kycViewModel.getProgressText(),
-                    progressText = kycViewModel.getProgressPercentage(),
                     modifier = Modifier.padding(paddingValues)
                 )
             }
             
             KycStep.VERIFY_PHONE -> {
-                KycOtpVerificationScreen(
+                KycVerifyPhoneScreen(
                     phoneNumber = uiState.phoneNumber,
-                    onOtpVerified = { otp ->
+                    onOtpVerified = { otp: String ->
                         kycViewModel.verifyOtp(otp)
                     },
                     onNavigateBack = {
                         kycViewModel.goBack()
                     },
+                    onResendCode = {
+                        kycViewModel.addPhoneNumber(uiState.phoneNumber)
+                    },
                     isLoading = uiState.isLoading,
-                    progress = uiState.progress,
-                    stepText = kycViewModel.getProgressText(),
-                    progressText = kycViewModel.getProgressPercentage(),
                     modifier = Modifier.padding(paddingValues)
                 )
             }
             
             KycStep.CREATE_PIN -> {
-                ImprovedCreatePinScreen(
-                    userName = uiState.extractedData?.user_name ?: "User",
+                KycCreatePinScreen(
                     onPinCreated = { pin ->
                         kycViewModel.createPin(pin)
                     },
                     onNavigateBack = {
                         kycViewModel.goBack()
                     },
-                    progress = uiState.progress,
-                    stepText = kycViewModel.getProgressText(),
-                    progressText = kycViewModel.getProgressPercentage(),
+                    isLoading = uiState.isLoading,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -170,9 +166,6 @@ fun KycFlowScreen(
                     onNavigateBack = {
                         kycViewModel.goBack()
                     },
-                    progress = uiState.progress,
-                    stepText = kycViewModel.getProgressText(),
-                    progressText = kycViewModel.getProgressPercentage(),
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -187,16 +180,6 @@ fun KycFlowScreen(
                     modifier = Modifier.padding(paddingValues)
                 )
             }
-            
-            else -> {
-                // Fallback to Welcome screen
-                WelcomeScreen(
-                    onGetStarted = {
-                        kycViewModel.startKyc()
-                    },
-                    modifier = Modifier.padding(paddingValues)
-                )
-            }
         }
     }
 }
@@ -206,7 +189,7 @@ fun KycFlowScreen(
  */
 @Composable
 fun KycCompletionScreen(
-    extractedData: com.example.g_kash.authentication.data.ExtractedIdData?,
+    extractedData: ExtractedIdData?,
     onContinueToLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -296,6 +279,12 @@ fun KycCompletionScreen(
     }
 }
 
+
+
+
+
+
+
 /**
  * Enhanced Login Screen specifically for KYC users using National ID
  */
@@ -305,8 +294,8 @@ fun KycLoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToSignup: () -> Unit,
-    authViewModel: AuthViewModel = koinViewModel(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    authViewModel: AuthViewModel = koinViewModel()
 ) {
     var nationalId by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
@@ -337,7 +326,7 @@ fun KycLoginScreen(
             ) {
                 IconButton(onClick = onNavigateBack) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
@@ -444,7 +433,7 @@ fun KycLoginScreen(
                 ImprovedLoginPinEntry(
                     userIdNumber = nationalId,
                     onPinEntered = { enteredPin ->
-                        pin = enteredPin
+                        // pin = enteredPin // This line is not needed as we are not using the pin variable
                         isLoading = true
                         // Here you would call the login API
                         // For now, simulate success after a delay
