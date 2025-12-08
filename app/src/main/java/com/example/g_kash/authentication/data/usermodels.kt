@@ -1,20 +1,23 @@
 package com.example.g_kash.authentication.data
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 
 // Original registration models (keeping for backward compatibility)
 @Serializable
 data class RegisterUserRequest(
     val user_name: String,
-    val phoneNumber: String,
-    val user_nationalId: String
+    val email: String,
+    val user_pin: String,
+    val confirm_pin: String
 )
 
 @Serializable
 data class RegisterUserResponse(
+    val success: Boolean,
     val message: String,
-    val temp_token: String,
-    val user_id: String
+    val token: String? = null,
+    val user: UserData? = null
 )
 
 // KYC Models for new ID + Selfie registration flow
@@ -38,6 +41,7 @@ data class ExtractedIdData(
 
 @Serializable
 data class AddPhoneRequest(
+    @SerialName("phone_number")
     val phoneNumber: String
 )
 
@@ -49,17 +53,19 @@ data class AddPhoneResponse(
 
 @Serializable
 data class UserData(
-    val user_nationalId: String,
+    val id: String,
     val user_name: String,
-    val phoneNumber: String
+    val email: String
 )
 
 @Serializable
 data class KycUserData(
+    val id: String? = null,
     val user_nationalId: String,
     val user_name: String,
     val phoneNumber: String,
-    val idVerified: Boolean
+    val idVerified: Boolean,
+    val email: String? = null
 )
 
 @Serializable
@@ -71,14 +77,14 @@ data class CreatePinRequest(
 data class CreatePinResponse(
     val success: Boolean,
     val message: String,
-    val token: String,
-    val user: KycUserData
+    val token: String? = null,
+    val user: KycUserData? = null
 )
 
 @Serializable
 data class LoginRequest(
-    val user_nationalId: String, // Changed from phoneNumber to nationalId
-    val user_pin: String // Changed from pin to user_pin
+    val email: String,
+    val user_pin: String
 )
 
 @Serializable

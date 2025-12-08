@@ -971,6 +971,173 @@ fun ImprovedWelcomeBackPinScreen(
 }
 
 @Composable
+fun ImprovedLoginEmailPinScreen(
+    onLoginSuccess: (String, String) -> Unit,
+    onNavigateBack: () -> Unit,
+    isLoading: Boolean = false,
+    showError: String? = null,
+    modifier: Modifier = Modifier
+) {
+    var email by remember { mutableStateOf("") }
+    var pin by remember { mutableStateOf("") }
+    var loginStep by remember { mutableStateOf(0) } // 0 = email, 1 = pin
+    
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Header
+        Text(
+            text = "Welcome Back",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+        
+        if (loginStep == 0) {
+            // Email Entry Step
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                isError = showError != null,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+            )
+            
+            showError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+            
+            Button(
+                onClick = {
+                    if (email.isNotBlank() && email.contains("@")) {
+                        loginStep = 1
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                enabled = !isLoading
+            ) {
+                Text("Next")
+            }
+            
+            TextButton(
+                onClick = onNavigateBack,
+                modifier = Modifier.padding(top = 16.dp)
+            ) {
+                Text("Back")
+            }
+        } else {
+            // PIN Entry Step
+            Text(
+                text = "Enter PIN",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            
+            Text(
+                text = email,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+            
+            // PIN dots display
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(bottom = 32.dp)
+            ) {
+                repeat(4) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(
+                                when {
+                                    showError != null -> Color(0xFFD32F2F)
+                                    index < pin.length -> Color(0xFF2E7D32)
+                                    else -> Color(0xFFE0E0E0)
+                                },
+                                CircleShape
+                            )
+                    )
+                }
+            }
+            
+            // Compact number pad
+            CompactNumberPad(
+                onNumberClick = { number ->
+                    if (pin.length < 4 && !isLoading) {
+                        pin += number
+                    }
+                },
+                onBackspaceClick = {
+                    if (pin.isNotEmpty() && !isLoading) {
+                        pin = pin.dropLast(1)
+                    }
+                },
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
+            
+            showError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+            
+            Button(
+                onClick = {
+                    if (pin.length == 4) {
+                        onLoginSuccess(email, pin)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                enabled = pin.length == 4 && !isLoading
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Login")
+                }
+            }
+            
+            TextButton(
+                onClick = {
+                    pin = ""
+                    loginStep = 0
+                },
+                modifier = Modifier.padding(top = 16.dp)
+            ) {
+                Text("Back")
+            }
+        }
+    }
+}
+
+@Composable
 fun ImprovedLoginPinEntry(
     userIdNumber: String,
     onPinEntered: (String) -> Unit,

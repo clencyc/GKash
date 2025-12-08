@@ -14,11 +14,20 @@ koinAndroidxCompose = "3.5.6"
 koinAndroidxViewmodel = "3.5.6"
 koinTest = "4.1.1"
 koin = "4.1.1"
-
 ktor = "2.3.7"
+kotlinxSerializationJson = "1.9.0"
+googleServicesPlugin = "4.4.1"
+kotlinSerializationPlugin = "2.2.21" # Match your project's Kotlin version
 playServicesAuth = "21.4.0"
+googleServices = "4.4.2"
 
 [libraries]
+
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+
+firebase-bom = { module = "com.google.firebase:firebase-bom", version = "34.6.0" }
+
+
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -59,4 +68,5 @@ play-services-auth = { group = "com.google.android.gms", name = "play-services-a
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerializationPlugin" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServicesPlugin" }

@@ -12,41 +12,43 @@ import kotlinx.coroutines.flow.Flow
 interface AuthRepository {
     fun getAuthTokenStream(): Flow<String?>
 
-    // Original methods (keeping for backward compatibility)
+    // Registration and Authentication
     suspend fun registerUser(
         name: String,
-        phoneNumber: String,
-        idNumber: String
+        email: String,
+        pin: String,
+        confirmPin: String
     ): Result<RegisterUserResponse>
 
-    suspend fun createPin(
-        userId: String,
-        pin: String
-    ): Result<CreatePinResponse>
-
     suspend fun login(
-        phoneNumber: String,
+        email: String,
         pin: String
     ): Result<LoginResponse>
 
-    // New KYC methods
+    // KYC Related Methods
     suspend fun registerWithId(
         idImageBytes: ByteArray,
         selfieBytes: ByteArray
-    ): Result<KycIdUploadResponse>
+    ): KycIdUploadResponse
 
     suspend fun addPhone(
-        phoneNumber: String
-    ): Result<AddPhoneResponse>
+        phoneNumber: String,
+        tempToken: String
+    ): AddPhoneResponse
 
     suspend fun createPinKyc(
-        pin: String
-    ): Result<CreatePinResponse>
+        pin: String,
+        tempToken: String
+    ): CreatePinResponse
 
-    suspend fun loginWithNationalId(
-        nationalId: String,
-        pin: String
-    ): Result<LoginResponse>
+    suspend fun createPin(pin: String): Result<CreatePinResponse>
+
+    suspend fun saveSessionAfterKyc(
+        token: String,
+        userId: String,
+        userName: String,
+        userEmail: String
+    )
 
     suspend fun logout()
 }
@@ -55,84 +57,67 @@ interface AuthRepository {
 class CreateAccountUseCase(private val repository: AuthRepository) {
     suspend operator fun invoke(
         name: String,
-        phoneNumber: String,
-        idNumber: String
+        email: String,
+        pin: String,
+        confirmPin: String
     ): Result<RegisterUserResponse> {
-        if (name.isBlank()) return Result.failure(Exception("Name is required"))
-        if (phoneNumber.isBlank()) return Result.failure(Exception("Phone number is required"))
-        if (idNumber.isBlank()) return Result.failure(Exception("ID number is required"))
+        android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "============================================")
+        android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "INVOKED with parameters:")
+        android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "name: $name")
+        android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "email: $email")
+        android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "pin length: ${pin.length}")
+        android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "confirmPin length: ${confirmPin.length}")
+        android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "============================================")
+        
+        if (name.isBlank()) {
+            android.util.Log.e("CREATE_ACCOUNT_USE_CASE", "✗ Validation failed: Name is blank")
+            return Result.failure(Exception("Name is required"))
+        }
+        if (email.isBlank()) {
+            android.util.Log.e("CREATE_ACCOUNT_USE_CASE", "✗ Validation failed: Email is blank")
+            return Result.failure(Exception("Email is required"))
+        }
+        if (!email.contains("@")) {
+            android.util.Log.e("CREATE_ACCOUNT_USE_CASE", "✗ Validation failed: Invalid email format")
+            return Result.failure(Exception("Please enter a valid email"))
+        }
+        if (pin.length != 4 || !pin.all { it.isDigit() }) {
+            android.util.Log.e("CREATE_ACCOUNT_USE_CASE", "✗ Validation failed: PIN invalid (length=${pin.length})")
+            return Result.failure(Exception("PIN must be 4 digits"))
+        }
+        if (confirmPin.length != 4 || !confirmPin.all { it.isDigit() }) {
+            android.util.Log.e("CREATE_ACCOUNT_USE_CASE", "✗ Validation failed: Confirm PIN invalid (length=${confirmPin.length})")
+            return Result.failure(Exception("Confirm PIN must be 4 digits"))
+        }
+        if (pin != confirmPin) {
+            android.util.Log.e("CREATE_ACCOUNT_USE_CASE", "✗ Validation failed: PINs do not match")
+            return Result.failure(Exception("PINs do not match"))
+        }
 
-        return repository.registerUser(name, phoneNumber, idNumber)
-    }
-}
-
-class CreatePinUseCase(private val repository: AuthRepository) {
-    suspend operator fun invoke(
-        userId: String,
-        pin: String
-    ): Result<CreatePinResponse> {
-        if (pin.length != 4) return Result.failure(Exception("PIN must be 4 digits"))
-        if (!pin.all { it.isDigit() }) return Result.failure(Exception("PIN must contain only digits"))
-
-        return repository.createPin(userId, pin)
+        android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "✓ All validations passed")
+        android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "Calling repository.registerUser()...")
+        
+        try {
+            val result = repository.registerUser(name, email, pin, confirmPin)
+            android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "Repository call completed")
+            android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "Result success: ${result.isSuccess}")
+            android.util.Log.d("CREATE_ACCOUNT_USE_CASE", "Result failure: ${result.isFailure}")
+            return result
+        } catch (e: Exception) {
+            android.util.Log.e("CREATE_ACCOUNT_USE_CASE", "✗ Exception in repository call", e)
+            return Result.failure(e)
+        }
     }
 }
 
 class LoginUseCase(private val repository: AuthRepository) {
     suspend operator fun invoke(
-        phoneNumber: String,
+        email: String,
         pin: String
     ): Result<LoginResponse> {
-        if (phoneNumber.isBlank()) return Result.failure(Exception("Phone number is required"))
+        if (email.isBlank()) return Result.failure(Exception("Email is required"))
         if (pin.length != 4) return Result.failure(Exception("PIN must be 4 digits"))
 
-        return repository.login(phoneNumber, pin)
-    }
-}
-
-// KYC Use Cases
-class RegisterWithIdUseCase(private val repository: AuthRepository) {
-    suspend operator fun invoke(
-        idImageBytes: ByteArray,
-        selfieBytes: ByteArray
-    ): Result<KycIdUploadResponse> {
-        if (idImageBytes.isEmpty()) return Result.failure(Exception("ID image is required"))
-        if (selfieBytes.isEmpty()) return Result.failure(Exception("Selfie is required"))
-
-        return repository.registerWithId(idImageBytes, selfieBytes)
-    }
-}
-
-class AddPhoneUseCase(private val repository: AuthRepository) {
-    suspend operator fun invoke(
-        phoneNumber: String
-    ): Result<AddPhoneResponse> {
-        if (phoneNumber.isBlank()) return Result.failure(Exception("Phone number is required"))
-        if (phoneNumber.length < 10) return Result.failure(Exception("Invalid phone number format"))
-
-        return repository.addPhone(phoneNumber)
-    }
-}
-
-class CreatePinKycUseCase(private val repository: AuthRepository) {
-    suspend operator fun invoke(
-        pin: String
-    ): Result<CreatePinResponse> {
-        if (pin.length != 4) return Result.failure(Exception("PIN must be 4 digits"))
-        if (!pin.all { it.isDigit() }) return Result.failure(Exception("PIN must contain only digits"))
-
-        return repository.createPinKyc(pin)
-    }
-}
-
-class LoginWithNationalIdUseCase(private val repository: AuthRepository) {
-    suspend operator fun invoke(
-        nationalId: String,
-        pin: String
-    ): Result<LoginResponse> {
-        if (nationalId.isBlank()) return Result.failure(Exception("National ID is required"))
-        if (pin.length != 4) return Result.failure(Exception("PIN must be 4 digits"))
-
-        return repository.loginWithNationalId(nationalId, pin)
+        return repository.login(email, pin)
     }
 }

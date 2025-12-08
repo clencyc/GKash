@@ -22,8 +22,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.g_kash.profile.presentation.*
+import com.example.g_kash.profile.presentation.model.UserProfile
 import com.example.g_kash.points.data.StockPurchase
+import com.example.g_kash.profile.presentation.*
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -99,13 +100,7 @@ fun EnhancedProfileScreen(
                 modifier = Modifier.padding(vertical = 8.dp)
             )
         }
-        
-        items(getAccountSettingsOptions(onNavigateToSettings, onNavigateToNotifications, onNavigateToSecurity)) { option ->
-            SettingsOptionItem(
-                option = option,
-                onClick = option.onClick
-            )
-        }
+
         
         item {
             // App Theme Toggle
@@ -158,7 +153,7 @@ fun EnhancedProfileHeader(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (user.profilePicture.isNotEmpty()) {
+                        if (user.name.isNotEmpty() && user.name.length >= 2) {
                             Text(
                                 text = user.name.take(2).uppercase(),
                                 style = MaterialTheme.typography.headlineMedium,

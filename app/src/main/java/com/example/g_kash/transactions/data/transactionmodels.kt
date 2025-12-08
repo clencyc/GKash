@@ -14,9 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.g_kash.accounts.presentation.formatCurrency
+import com.example.g_kash.transactions.presentation.TransactionsViewModel
+import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -52,17 +56,50 @@ data class Transaction(
 fun AccountTransactionsScreen(
     accountId: String,
     onNavigateBack: () -> Unit,
-    onTransactionClick: (String) -> Unit
+    onTransactionClick: (String) -> Unit,
+    viewModel: TransactionsViewModel = koinViewModel()
 ) {
-    // TODO: Replace with actual ViewModel
-    val transactions = remember { generateMockTransactions(accountId) }
+    val transactions by viewModel.transactions.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
     var selectedFilter by remember { mutableStateOf<TransactionType?>(null) }
     var showFilterMenu by remember { mutableStateOf(false) }
+
+    LaunchedEffect(accountId) {
+        viewModel.loadTransactions(accountId)
+    }
 
     val filteredTransactions = if (selectedFilter != null) {
         transactions.filter { it.type == selectedFilter }
     } else {
         transactions
+    }
+
+    // Show loading indicator
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    // Show error message if any
+    error?.let { errorMessage ->
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
+        }
+        return
     }
 
     Scaffold(
@@ -379,70 +416,4 @@ fun formatDateTime(dateTime: String): String {
     } catch (e: Exception) {
         dateTime
     }
-}
-
-// Mock data generator (remove in production)
-fun generateMockTransactions(accountId: String): List<Transaction> {
-    return listOf(
-        Transaction(
-            transactionId = "TXN001",
-            accountId = accountId,
-            type = TransactionType.DEPOSIT,
-            amount = 5000.0,
-            status = TransactionStatus.COMPLETED,
-            description = "Deposit from M-Pesa",
-            dateTime = "2025-10-05 09:30:00",
-            reference = "MPE001"
-        ),
-        Transaction(
-            transactionId = "TXN002",
-            accountId = accountId,
-            type = TransactionType.WITHDRAWAL,
-            amount = 1000.0,
-            status = TransactionStatus.COMPLETED,
-            description = "ATM Withdrawal",
-            dateTime = "2025-10-04 14:15:00",
-            reference = "ATM789"
-        ),
-        Transaction(
-            transactionId = "TXN003",
-            accountId = accountId,
-            type = TransactionType.INVESTMENT,
-            amount = 3000.0,
-            status = TransactionStatus.COMPLETED,
-            description = "Investment Purchase",
-            dateTime = "2025-10-03 11:20:00",
-            reference = "INV456"
-        ),
-        Transaction(
-            transactionId = "TXN004",
-            accountId = accountId,
-            type = TransactionType.INTEREST,
-            amount = 150.0,
-            status = TransactionStatus.COMPLETED,
-            description = "Monthly Interest",
-            dateTime = "2025-10-01 00:00:00",
-            reference = "INT789"
-        ),
-        Transaction(
-            transactionId = "TXN005",
-            accountId = accountId,
-            type = TransactionType.TRANSFER_IN,
-            amount = 2000.0,
-            status = TransactionStatus.PENDING,
-            description = "Transfer from John Doe",
-            dateTime = "2025-09-30 16:45:00",
-            reference = "TRF123"
-        ),
-        Transaction(
-            transactionId = "TXN006",
-            accountId = accountId,
-            type = TransactionType.TRANSFER_OUT,
-            amount = 500.0,
-            status = TransactionStatus.FAILED,
-            description = "Transfer to Jane Smith",
-            dateTime = "2025-09-29 10:30:00",
-            reference = "TRF124"
-        )
-    )
 }

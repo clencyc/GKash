@@ -19,11 +19,9 @@ import org.koin.androidx.compose.koinViewModel
 
 enum class KycStep {
     WELCOME,
-    UPLOAD_ID,
+    CREATE_ACCOUNT,
     ADD_PHONE,
     VERIFY_PHONE,
-    CREATE_PIN,
-    CONFIRM_PIN,
     COMPLETE
 }
 
@@ -34,7 +32,7 @@ enum class KycStep {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KycFlowScreen(
-    onKycComplete: () -> Unit,
+    onKycComplete: (token: String) -> Unit,
     onNavigateBack: () -> Unit,
     kycViewModel: KycViewModel = koinViewModel(),
     modifier: Modifier = Modifier
@@ -68,12 +66,16 @@ fun KycFlowScreen(
                         duration = SnackbarDuration.Short
                     )
                 }
+                is KycEvent.NavigateToDashboard -> {
+                    Log.d("KYC_UI", "Navigating to dashboard with token")
+                    onKycComplete(event.token)
+                }
                 is KycEvent.RegistrationComplete -> {
                     // ViewModel already handles proper timing and token validation
-                    onKycComplete()
+                    onKycComplete("")
                 }
                 is KycEvent.NavigateToLogin -> {
-                    onKycComplete()
+                    onKycComplete("")
                 }
             }
         }
@@ -98,12 +100,14 @@ fun KycFlowScreen(
                 )
             }
             
-            KycStep.UPLOAD_ID -> {
-                KycUploadIdScreen(
-                    onIdUploaded = { idUri, selfieUri ->
-                        kycViewModel.uploadIdAndSelfie(context, idUri, selfieUri)
+            KycStep.CREATE_ACCOUNT -> {
+                CreateAccountScreen(
+                    onAccountCreated = { fullName: String, email: String, pin: String, confirmPin: String ->
+                        kycViewModel.createAccount(fullName, email, pin, confirmPin)
                     },
-                    onNavigateBack = onNavigateBack,
+                    onNavigateBack = {
+                        kycViewModel.goBack()
+                    },
                     isLoading = uiState.isLoading,
                     modifier = Modifier.padding(paddingValues)
                 )
@@ -139,43 +143,11 @@ fun KycFlowScreen(
                 )
             }
             
-            KycStep.CREATE_PIN -> {
-                KycCreatePinScreen(
-                    onPinCreated = { pin ->
-                        kycViewModel.createPin(pin)
-                    },
-                    onNavigateBack = {
-                        kycViewModel.goBack()
-                    },
-                    isLoading = uiState.isLoading,
-                    modifier = Modifier.padding(paddingValues)
-                )
-            }
-            
-            KycStep.CONFIRM_PIN -> {
-                ImprovedConfirmPinScreen(
-                    originalPin = uiState.pin,
-                    onPinConfirmed = {
-                        kycViewModel.confirmPin(uiState.pin)
-                    },
-                    onPinMismatch = {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("PINs do not match. Please try again.")
-                        }
-                    },
-                    onNavigateBack = {
-                        kycViewModel.goBack()
-                    },
-                    modifier = Modifier.padding(paddingValues)
-                )
-            }
-            
             KycStep.COMPLETE -> {
                 KycCompletionScreen(
-                    extractedData = uiState.extractedData,
                     onContinueToLogin = {
-                        // In demo mode, just complete the KYC flow
-                        onKycComplete()
+                        // Registration flow complete - navigate with empty token (shouldn't reach here)
+                        onKycComplete("")
                     },
                     modifier = Modifier.padding(paddingValues)
                 )
@@ -189,7 +161,6 @@ fun KycFlowScreen(
  */
 @Composable
 fun KycCompletionScreen(
-    extractedData: ExtractedIdData?,
     onContinueToLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -232,26 +203,16 @@ fun KycCompletionScreen(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        extractedData?.let { data ->
-            Text(
-                text = "Welcome, ${data.user_name}",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            Text(
-                text = "ID: ${data.user_nationalId}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Text(
+            text = "Your account has been successfully verified!",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         
         Spacer(modifier = Modifier.height(32.dp))
         
         Text(
-            text = "Your account has been created successfully!\nYou can now log in with your National ID and PIN.",
+            text = "Your account has been created successfully!\nYou can now log in with your email and PIN.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center

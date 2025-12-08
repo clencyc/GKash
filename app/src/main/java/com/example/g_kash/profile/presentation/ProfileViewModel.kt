@@ -2,12 +2,19 @@ package com.example.g_kash.profile.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.g_kash.profile.domain.ProfileRepository
+import com.example.g_kash.profile.presentation.model.UserProfile
+import com.example.g_kash.profile.presentation.model.UserAchievements
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.component.KoinComponent
 
-class ProfileViewModel : ViewModel() {
+class ProfileViewModel(
+    private val repository: ProfileRepository
+) : ViewModel(), KoinComponent {
     
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
@@ -20,34 +27,37 @@ class ProfileViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             
-            // Simulate loading user data
-            // In real app, this would come from repository
-            val user = UserProfile(
-                id = "user_123",
-                name = "John Doe",
-                email = "john.doe@example.com",
-                phoneNumber = "+254 712 345 678",
-                dateJoined = "January 2024"
-            )
-            
-            val achievements = UserAchievements(
-                lessonsCompleted = 12,
-                learningStreak = 5,
-                savingsGoalsAchieved = 2,
-                totalTimeSpent = "2h 30m",
-                level = "Intermediate"
-            )
+            // Load user profile and achievements in parallel
+            val profileResult = repository.getUserProfile()
+            val achievementsResult = repository.getUserAchievements()
             
             _uiState.value = _uiState.value.copy(
-                user = user,
-                achievements = achievements,
-                isLoading = false
+                user = profileResult.getOrNull() ?: UserProfile(),
+                achievements = achievementsResult.getOrNull() ?: UserAchievements(),
+                isLoading = false,
+                error = listOfNotNull(
+                    profileResult.exceptionOrNull()?.message,
+                    achievementsResult.exceptionOrNull()?.message
+                ).joinToString("\n").takeIf { it.isNotEmpty() }
             )
         }
     }
     
     fun updateUserProfile(updatedUser: UserProfile) {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            
+            repository.updateUserProfile(updatedUser)
+                .onSuccess {
+                    // Refresh the profile data
+                    loadUserProfile()
+                }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        error = exception.message ?: "Failed to update profile",
+                        isLoading = false
+                    )
+                }
             _uiState.value = _uiState.value.copy(user = updatedUser)
             // Save to repository
         }

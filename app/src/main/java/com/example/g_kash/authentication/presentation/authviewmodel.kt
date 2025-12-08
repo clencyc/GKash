@@ -13,12 +13,22 @@ import kotlinx.coroutines.launch
 
 // UI States
 data class CreateAccountUiState(
-    val name: String = "",
-    val phoneNumber: String = "",
-    val idNumber: String = "",
+    val fullName: String = "",
+    val email: String = "",
+    val pin: String = "",
+    val confirmPin: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
     val isTermsAccepted: Boolean = false
+)
+
+data class PhoneVerificationUiState(
+    val phoneNumber: String = "",
+    val otpCode: String = "",
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val isOtpSent: Boolean = false,
+    val isPhoneVerified: Boolean = false
 )
 
 data class PinUiState(
@@ -31,10 +41,12 @@ data class PinUiState(
 
 // Events
 sealed class AuthEvent {
+    object NavigateToPhoneVerification : AuthEvent()
     object NavigateToPin : AuthEvent()
     object NavigateToConfirmPin : AuthEvent()
     object NavigateToApp : AuthEvent()
     data class ShowError(val message: String) : AuthEvent()
+    data class ShowSuccess(val message: String) : AuthEvent()
 }
 
 // --- THIS IS THE NEW UI STATE DEFINITION ---
@@ -61,16 +73,24 @@ class CreateAccountViewModel(
 
     private var currentUserId: String? = null
 
-    fun updateName(name: String) {
-        _uiState.value = _uiState.value.copy(name = name)
+    fun updateFullName(name: String) {
+        _uiState.value = _uiState.value.copy(fullName = name)
     }
 
-    fun updatePhoneNumber(phoneNumber: String) {
-        _uiState.value = _uiState.value.copy(phoneNumber = phoneNumber)
+    fun updateEmail(email: String) {
+        _uiState.value = _uiState.value.copy(email = email)
     }
 
-    fun updateIdNumber(idNumber: String) {
-        _uiState.value = _uiState.value.copy(idNumber = idNumber)
+    fun updatePin(pin: String) {
+        if (pin.length <= 4 && pin.all { it.isDigit() }) {
+            _uiState.value = _uiState.value.copy(pin = pin)
+        }
+    }
+
+    fun updateConfirmPin(confirmPin: String) {
+        if (confirmPin.length <= 4 && confirmPin.all { it.isDigit() }) {
+            _uiState.value = _uiState.value.copy(confirmPin = confirmPin)
+        }
     }
 
     fun toggleTermsAcceptance() {
@@ -82,6 +102,23 @@ class CreateAccountViewModel(
     fun createAccount() {
         val state = _uiState.value
 
+        // Validation
+        if (state.fullName.isBlank()) {
+            _uiState.value = state.copy(error = "Please enter your full name")
+            return
+        }
+        if (state.email.isBlank()) {
+            _uiState.value = state.copy(error = "Please enter your email")
+            return
+        }
+        if (!state.email.contains("@")) {
+            _uiState.value = state.copy(error = "Please enter a valid email")
+            return
+        }
+        if (state.pin.length != 4) {
+            _uiState.value = state.copy(error = "PIN must be 4 digits")
+            return
+        }
         if (!state.isTermsAccepted) {
             _uiState.value = state.copy(error = "Please accept Terms and Conditions")
             return
@@ -90,24 +127,29 @@ class CreateAccountViewModel(
         viewModelScope.launch {
             _uiState.value = state.copy(isLoading = true, error = null)
 
-            createAccountUseCase(
-                name = state.name,
-                phoneNumber = state.phoneNumber,
-                idNumber = state.idNumber
-            ).fold(
-                onSuccess = { response ->
-                    _uiState.value = _uiState.value.copy(isLoading = false)
-                    Log.d("CreateAccount", "User registration response: userId=${response.user_id}, hasTempToken=${response.temp_token.isNotEmpty()}")
-                    currentUserId = response.user_id
-                    _events.emit(AuthEvent.NavigateToPin)
-                },
-                onFailure = { error ->
+            val result = createAccountUseCase(
+                name = state.fullName,
+                email = state.email,
+                pin = state.pin,
+                confirmPin = state.confirmPin
+            )
+            result.onSuccess { response ->
+                _uiState.value = _uiState.value.copy(isLoading = false)
+                if (response.success && response.user != null && response.token != null) {
+                    Log.d("CreateAccount", "User registration response: userId=${response.user.id}, hasToken=${response.token.isNotEmpty()}")
+                    currentUserId = response.user.id
+                    _events.emit(AuthEvent.NavigateToPhoneVerification)
+                } else {
                     _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = error.message ?: "Failed to create account"
+                        error = response.message
                     )
                 }
-            )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = error.message ?: "Failed to create account"
+                )
+            }
         }
     }
 
@@ -183,20 +225,132 @@ class ConfirmPinViewModel(
         }
         viewModelScope.launch {
             _uiState.value = state.copy(isLoading = true, error = null)
-            createPinUseCase(userIdValue, originalPinValue).fold(
-                onSuccess = { response ->
-                    _uiState.value = _uiState.value.copy(isLoading = false)
+            val result = createPinUseCase(originalPinValue)
+            result.onSuccess { response ->
+                _uiState.value = _uiState.value.copy(isLoading = false)
+                if (response.success && response.token != null) {
                     Log.d("CreatePin", "PIN creation response: hasToken=${response.token.isNotEmpty()}")
                     _events.emit(AuthEvent.NavigateToApp)
-                },
-                onFailure = { error ->
+                } else {
                     _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = error.message ?: "Failed to create PIN"
+                        error = response.message
                     )
                 }
-            )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = error.message ?: "Failed to create PIN"
+                )
+            }
         }
+    }
+}
+
+// Phone Verification ViewModel
+class PhoneVerificationViewModel(
+    private val sendOtpUseCase: com.example.g_kash.otp.domain.SendOtpUseCase,
+    private val verifyOtpUseCase: com.example.g_kash.otp.domain.VerifyOtpUseCase
+) : ViewModel() {
+    private val _uiState = mutableStateOf(PhoneVerificationUiState())
+    val uiState: State<PhoneVerificationUiState> = _uiState
+    
+    private val _events = MutableSharedFlow<AuthEvent>()
+    val events: SharedFlow<AuthEvent> = _events.asSharedFlow()
+    
+    private var userName: String? = null
+    
+    fun setUserName(name: String) {
+        userName = name
+    }
+    
+    fun updatePhoneNumber(phoneNumber: String) {
+        _uiState.value = _uiState.value.copy(phoneNumber = phoneNumber)
+    }
+    
+    fun updateOtpCode(code: String) {
+        if (code.length <= 6 && code.all { it.isDigit() }) {
+            _uiState.value = _uiState.value.copy(otpCode = code)
+        }
+    }
+    
+    fun sendOtp() {
+        val state = _uiState.value
+        val name = userName
+        
+        if (state.phoneNumber.isBlank()) {
+            _uiState.value = state.copy(error = "Please enter your phone number")
+            return
+        }
+        
+        if (name.isNullOrBlank()) {
+            _uiState.value = state.copy(error = "User name not found. Please restart registration.")
+            return
+        }
+        
+        viewModelScope.launch {
+            _uiState.value = state.copy(isLoading = true, error = null)
+            
+            val result = sendOtpUseCase(state.phoneNumber, name)
+            result.onSuccess { response ->
+                if (response.success) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isOtpSent = true
+                    )
+                    _events.emit(AuthEvent.ShowSuccess("OTP sent to ${state.phoneNumber}"))
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = response.message
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = error.message ?: "Failed to send OTP"
+                )
+            }
+        }
+    }
+    
+    fun verifyOtp() {
+        val state = _uiState.value
+        
+        if (state.otpCode.length != 6) {
+            _uiState.value = state.copy(error = "Please enter the 6-digit OTP")
+            return
+        }
+        
+        viewModelScope.launch {
+            _uiState.value = state.copy(isLoading = true, error = null)
+            
+            val result = verifyOtpUseCase(state.phoneNumber, state.otpCode)
+            result.onSuccess { response ->
+                if (response.success) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isPhoneVerified = true
+                    )
+                    _events.emit(AuthEvent.ShowSuccess("Phone number verified successfully!"))
+                    _events.emit(AuthEvent.NavigateToApp)
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = response.message
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = error.message ?: "Failed to verify OTP"
+                )
+            }
+        }
+    }
+    
+    fun resendOtp() {
+        _uiState.value = _uiState.value.copy(otpCode = "", isOtpSent = false)
+        sendOtp()
     }
 }
 

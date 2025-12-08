@@ -1,38 +1,60 @@
 package com.example.g_kash.profile.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.g_kash.R
+import com.example.g_kash.profile.presentation.model.UserProfile
+import com.example.g_kash.profile.presentation.model.UserAchievements
+import com.example.g_kash.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun ProfileScreen(
     onLogout: () -> Unit,
-    onNavigateToSettings: () -> Unit = {},
-    onNavigateToNotifications: () -> Unit = {},
-    onNavigateToSecurity: () -> Unit = {},
-    onNavigateToHelp: () -> Unit = {},
+    onEditProfile: () -> Unit = {},
     viewModel: ProfileViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -41,53 +63,97 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            // Profile Header
-            ProfileHeader(
-                user = uiState.user,
-                onEditProfile = { /* Handle edit profile */ }
-            )
+            // Profile Header with edit prompt
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                ProfileHeader(
+                    user = uiState.user,
+                    onEditProfile = onEditProfile
+                )
+
+                // Show edit prompt if profile is incomplete
+                if (uiState.user.name.isBlank() || uiState.user.email.isBlank()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Complete your profile to get started",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = onEditProfile) {
+                                Text("Edit Now")
+                            }
+                        }
+                    }
+                }
+            }
         }
-        
+
         item {
             // Achievement/Stats Card
             AchievementCard(achievements = uiState.achievements)
         }
-        
+
         item {
             // Quick Actions
             QuickActionsSection()
         }
-        
+
         item {
-            Text(
-                text = "Account Settings",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+            // Learning Journey Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
+                    Text(
+                        text = "Learning Journey",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Add your learning journey content here
+                    Text(
+                        text = "Your learning progress will appear here",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
         }
-        
-        items(getAccountSettingsOptions(onNavigateToSettings, onNavigateToNotifications, onNavigateToSecurity)) { option ->
-            SettingsOptionItem(
-                option = option,
-                onClick = option.onClick
-            )
-        }
-        
+
         item {
-            // App Theme Toggle
-            AppThemeSection()
-        }
-        
-        item {
-            // Logout Button
-            LogoutSection(onLogout = onLogout)
-        }
-        
-        item {
-            // App version info
-            AppVersionInfo()
+            // App version and logout
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                AppVersionInfo()
+                LogoutSection(onLogout = onLogout)
+            }
         }
     }
 }
@@ -118,8 +184,7 @@ fun ProfileHeader(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                if (user.profilePicture.isNotEmpty()) {
-                    // Load actual profile picture here
+                if (user.name.isNotEmpty() && user.name.length >= 2) {
                     Text(
                         text = user.name.take(2).uppercase(),
                         style = MaterialTheme.typography.headlineMedium,
@@ -540,56 +605,4 @@ data class SettingsOption(
     val onClick: () -> Unit
 )
 
-data class ProfileUiState(
-    val user: UserProfile = UserProfile(
-        id = "1",
-        name = "John Doe",
-        email = "john.doe@example.com",
-        dateJoined = "January 2024"
-    ),
-    val achievements: UserAchievements = UserAchievements(
-        lessonsCompleted = 12,
-        learningStreak = 5,
-        savingsGoalsAchieved = 2,
-        totalTimeSpent = "2h 30m"
-    ),
-    val isLoading: Boolean = false
-)
-
 // Helper functions for settings options
-fun getAccountSettingsOptions(
-    onNavigateToSettings: () -> Unit,
-    onNavigateToNotifications: () -> Unit,
-    onNavigateToSecurity: () -> Unit
-): List<SettingsOption> {
-    return listOf(
-        SettingsOption(
-            id = "personal_info",
-            title = "Personal Information",
-            subtitle = "Update your profile details",
-            icon = Icons.Default.Person,
-            onClick = onNavigateToSettings
-        ),
-        SettingsOption(
-            id = "notifications",
-            title = "Notifications",
-            subtitle = "Manage your notification preferences",
-            icon = Icons.Default.Notifications,
-            onClick = onNavigateToNotifications
-        ),
-        SettingsOption(
-            id = "security",
-            title = "Security & Privacy",
-            subtitle = "Password, biometrics, and privacy settings",
-            icon = Icons.Default.Security,
-            onClick = onNavigateToSecurity
-        ),
-        SettingsOption(
-            id = "linked_accounts",
-            title = "Linked Accounts",
-            subtitle = "Manage connected bank accounts",
-            icon = Icons.Default.AccountBalance,
-            onClick = { /* Navigate to linked accounts */ }
-        )
-    )
-}

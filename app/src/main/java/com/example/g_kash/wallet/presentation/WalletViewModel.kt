@@ -36,60 +36,21 @@ class WalletViewModel(
 
             val accountsResult = walletRepository.getUserAccounts()
             val balanceResult = walletRepository.getTotalBalance()
-            
-            // Generate dummy transactions
-            val dummyTransactions = generateDummyTransactions()
 
-            accountsResult.onSuccess { accounts ->
-                _uiState.update { it.copy(accounts = accounts) }
-            }.onFailure { error ->
-                _uiState.update { it.copy(error = error.message) }
+            // Update state with real data or error
+            _uiState.update { currentState ->
+                currentState.copy(
+                    accounts = accountsResult.getOrElse { emptyList() },
+                    totalBalance = balanceResult.getOrElse { 0.0 },
+                    recentTransactions = emptyList(),
+                    error = listOfNotNull(
+                        accountsResult.exceptionOrNull()?.message,
+                        balanceResult.exceptionOrNull()?.message
+                    ).joinToString("\n").takeIf { it.isNotEmpty() },
+                    isLoading = false
+                )
             }
-
-            balanceResult.onSuccess { balance ->
-                _uiState.update { it.copy(totalBalance = balance, recentTransactions = dummyTransactions) }
-            }.onFailure { error ->
-                // Use dummy data on failure for demo
-                _uiState.update { it.copy(totalBalance = 1000.0, recentTransactions = dummyTransactions, error = null) }
-            }
-
-            _uiState.update { it.copy(isLoading = false) }
         }
-    }
-    
-    private fun generateDummyTransactions(): List<Transaction> {
-        return listOf(
-            Transaction(
-                transactionId = "TXN001",
-                accountId = "acc_001",
-                type = TransactionType.WITHDRAWAL,
-                amount = 200.0,
-                status = TransactionStatus.COMPLETED,
-                description = "GKash Stock",
-                dateTime = "2025-10-11 07:45:00",
-                reference = "MN"
-            ),
-            Transaction(
-                transactionId = "TXN002",
-                accountId = "acc_001",
-                type = TransactionType.INVESTMENT,
-                amount = 3000.0,
-                status = TransactionStatus.COMPLETED,
-                description = "Investment",
-                dateTime = "2025-08-13 10:00:00",
-                reference = "IN"
-            ),
-            Transaction(
-                transactionId = "TXN003",
-                accountId = "acc_001",
-                type = TransactionType.INTEREST,
-                amount = 187.0,
-                status = TransactionStatus.COMPLETED,
-                description = "Interest Paid",
-                dateTime = "2025-08-12 02:30:00",
-                reference = "IP"
-            )
-        )
     }
 
     fun clearError() {
