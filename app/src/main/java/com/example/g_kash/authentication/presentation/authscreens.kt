@@ -1,7 +1,5 @@
 package com.example.g_kash.authentication.presentation
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -10,47 +8,38 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.*
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.material3.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import com.example.g_kash.analytics.AnalyticsHelper
+import com.google.firebase.analytics.FirebaseAnalytics
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -72,6 +61,8 @@ fun CreateAccountScreen(
     var confirmPin by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val analytics = FirebaseAnalytics.getInstance(context)
 
     Surface(
         modifier = modifier
@@ -193,13 +184,53 @@ fun CreateAccountScreen(
             Button(
                 onClick = {
                     when {
-                        fullName.isBlank() -> errorMessage = "Full name is required"
-                        email.isBlank() -> errorMessage = "Email is required"
-                        !email.contains("@") -> errorMessage = "Please enter a valid email"
-                        pin.length != 4 -> errorMessage = "PIN must be 4 digits"
-                        confirmPin != pin -> errorMessage = "PINs do not match"
+                        fullName.isBlank() -> {
+                            errorMessage = "Full name is required"
+                            AnalyticsHelper.logEvent(
+                                AnalyticsHelper.Events.ERROR_OCCURRED,
+                                mapOf("stage" to "account_creation", "field" to "fullName"),
+                                analytics
+                            )
+                        }
+                        email.isBlank() -> {
+                            errorMessage = "Email is required"
+                            AnalyticsHelper.logEvent(
+                                AnalyticsHelper.Events.ERROR_OCCURRED,
+                                mapOf("stage" to "account_creation", "field" to "email"),
+                                analytics
+                            )
+                        }
+                        !email.contains("@") -> {
+                            errorMessage = "Please enter a valid email"
+                            AnalyticsHelper.logEvent(
+                                AnalyticsHelper.Events.ERROR_OCCURRED,
+                                mapOf("stage" to "account_creation", "field" to "email_format"),
+                                analytics
+                            )
+                        }
+                        pin.length != 4 -> {
+                            errorMessage = "PIN must be 4 digits"
+                            AnalyticsHelper.logEvent(
+                                AnalyticsHelper.Events.ERROR_OCCURRED,
+                                mapOf("stage" to "account_creation", "field" to "pin"),
+                                analytics
+                            )
+                        }
+                        confirmPin != pin -> {
+                            errorMessage = "PINs do not match"
+                            AnalyticsHelper.logEvent(
+                                AnalyticsHelper.Events.ERROR_OCCURRED,
+                                mapOf("stage" to "account_creation", "field" to "pin_mismatch"),
+                                analytics
+                            )
+                        }
                         else -> {
                             errorMessage = null
+                            AnalyticsHelper.logEvent(
+                                AnalyticsHelper.Events.BUTTON_CLICKED,
+                                mapOf("button" to "create_account"),
+                                analytics
+                            )
                             onAccountCreated(fullName, email, pin, confirmPin)
                         }
                     }

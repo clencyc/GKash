@@ -43,6 +43,7 @@ import com.example.g_kash.points.domain.*
 import com.example.g_kash.points.data.MockPointsRepository
 import com.example.g_kash.points.presentation.PointsViewModel
 import com.example.g_kash.investment.presentation.InvestmentAccountCreationViewModel
+import com.google.firebase.analytics.FirebaseAnalytics
 import io.ktor.client.engine.android.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
@@ -179,6 +180,9 @@ val appModule = module {
         com.example.g_kash.profile.data.ProfileRepositoryImpl(apiService = get())
     }
 
+    // Firebase Analytics
+    single<FirebaseAnalytics> { FirebaseAnalytics.getInstance(androidContext()) }
+
     // USE CASES
     factory { CreateAccountUseCase(get()) }
     factory { CreatePinUseCase(get()) }
@@ -190,7 +194,7 @@ val appModule = module {
     // VIEWMODELS
     viewModel { AuthViewModel(get()) }
     viewModel { UserViewModel(get()) }
-    viewModel { KycViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { KycViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { AccountsViewModel(get()) }
     viewModel { FinancialLearningViewModel(get()) }
     viewModel { InvestmentAccountCreationViewModel(get()) }

@@ -27,13 +27,13 @@ import androidx.compose.ui.unit.sp
 import com.google.accompanist.pager.*
 import kotlinx.coroutines.launch
 
-// Pink color scheme
-private val PrimaryPink = Color(0xFFD91A5B)
-private val LightPink = Color(0xFFFFF0F5)
-private val DarkPink = Color(0xFFC4164E)
-private val AccentPink = Color(0xFFFF6B9D)
-private val TextDark = Color(0xFF1A1A1A)
-private val TextLight = Color(0xFF6B6B6B)
+// Theme-aware colors (these will adapt based on Material Theme)
+private val PrimaryPink = Color(0xFFD91A5B)  // Keep for reference only
+private val LightPink = Color(0xFFFFF0F5)   // Keep for reference only
+private val DarkPink = Color(0xFFC4164E)    // Keep for reference only
+private val AccentPink = Color(0xFFFF6B9D)  // Keep for reference only
+private val TextDark = Color(0xFF1A1A1A)    // Keep for reference only
+private val TextLight = Color(0xFF6B6B6B)   // Keep for reference only
 
 /**
  * Minimalistic Onboarding Screen with swipeable slides
@@ -64,8 +64,8 @@ fun OnboardingScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.White,
-                        LightPink.copy(alpha = 0.3f + gradientOffset * 0.2f)
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f + gradientOffset * 0.2f)
                     )
                 )
             )
@@ -90,7 +90,7 @@ fun OnboardingScreen(
                     ) {
                         Text(
                             text = "Skip",
-                            color = PrimaryPink,
+                            color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
@@ -147,7 +147,7 @@ fun OnboardingScreen(
                                 animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
                             )
                             val color by animateColorAsState(
-                                targetValue = if (isSelected) PrimaryPink else Color(0xFFFFE0EB),
+                                targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
                                 animationSpec = tween(300)
                             )
 
@@ -258,8 +258,8 @@ private fun OnboardingSlide(
                     .background(
                         brush = Brush.linearGradient(
                             colors = listOf(
-                                LightPink,
-                                Color(0xFFFFE0EB)
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
                             )
                         ),
                         shape = CircleShape
@@ -361,7 +361,7 @@ private fun GetStartedSlide(
                     text = "$",
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         }
