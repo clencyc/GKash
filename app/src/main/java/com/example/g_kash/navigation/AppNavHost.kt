@@ -85,32 +85,57 @@ fun AppNavigation() {
         ) {
             // --- AUTHENTICATION GRAPH ---
             navigation(
-                startDestination = "auth/login",
+                startDestination = "auth/onboarding",
                 route = Graph.AUTH
             ) {
-                composable("auth/login") {
-                    LoginScreen(
-                        onNavigateToSignup = { navController.navigate("auth/kyc") }, // Changed to KYC
-                        onNavigateToKyc = { navController.navigate("auth/kyc") },
-                        onLoginSuccess = {
-                            navController.navigate(Graph.MAIN) {
-                                popUpTo(Graph.AUTH) { inclusive = true }
+                // Onboarding screen - first thing unauthenticated users see
+                composable("auth/onboarding") {
+                    OnboardingScreen(
+                        onNavigateToLogin = {
+                            navController.navigate("auth/login") {
+                                popUpTo("auth/onboarding") { inclusive = true }
                             }
                         },
-                        onNavigateBack = { navController.popBackStack() }
+                        onNavigateToRegister = {
+                            navController.navigate("auth/kyc") {
+                                popUpTo("auth/onboarding") { inclusive = true }
+                            }
+                        }
                     )
                 }
                 
-                // KYC Flow (Primary Signup Process)
-                composable("auth/kyc") {
-                    KycFlowScreen(
-                        onKycComplete = {
-                            // After KYC, go directly to main app since PIN is created in KYC flow
+                // Login screen - for existing users
+                composable("auth/login") {
+                    ImprovedLoginEmailPinScreen(
+                        onLoginSuccess = { email, pin ->
+                            // TODO: Call login API with email+pin
                             navController.navigate(Graph.MAIN) {
                                 popUpTo(Graph.AUTH) { inclusive = true }
                             }
                         },
-                        onNavigateBack = { navController.popBackStack() }
+                        onNavigateBack = {
+                            navController.navigate("auth/onboarding") {
+                                popUpTo("auth/login") { inclusive = true }
+                            }
+                        }
+                    )
+                }
+                
+                // KYC Flow (Registration Process)
+                composable("auth/kyc") {
+                    KycFlowScreen(
+                        onKycComplete = { token ->
+                            // After KYC with registration complete, go directly to main app with token
+                            // Token is already saved in SessionStorage by ViewModel
+                            navController.navigate(Graph.MAIN) {
+                                popUpTo(Graph.AUTH) { inclusive = true }
+                            }
+                        },
+                        onNavigateBack = {
+                            navController.navigate("auth/onboarding") {
+                                popUpTo("auth/kyc") { inclusive = true }
+                            }
+                        }
                     )
                 }
                 

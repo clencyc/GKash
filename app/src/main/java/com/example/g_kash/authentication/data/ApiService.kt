@@ -4,11 +4,16 @@ import android.util.Log
 import com.example.g_kash.accounts.data.Account
 import com.example.g_kash.accounts.data.AccountsApiResponse
 import com.example.g_kash.accounts.data.TotalBalanceResponse
+import com.example.g_kash.authentication.data.model.BaseResponse
+import com.example.g_kash.authentication.data.model.UserAchievementsResponse
+import com.example.g_kash.authentication.data.model.UserProfileResponse
 import com.example.g_kash.authentication.domain.AuthRepository
 import com.example.g_kash.data.SessionStorage
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.android.*
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.forms.*
 import io.ktor.client.plugins.auth.Auth
 import io.ktor.client.plugins.auth.providers.BearerTokens
@@ -38,27 +43,83 @@ interface ApiService {
 
     suspend fun getAccounts(): AccountsApiResponse
     suspend fun getTotalBalance(): TotalBalanceResponse
+    
+    // Profile methods
+    suspend fun getUserProfile(id: String): UserProfileResponse
+    suspend fun getUserAchievements(id: String): UserAchievementsResponse
+    suspend fun updateUserProfile(
+        id: String,
+        name: String,
+        email: String,
+        phoneNumber: String
+    ): BaseResponse
 }
 
-class ApiServiceImpl(private val client: HttpClient) : ApiService {
+class ApiServiceImpl(
+    private val client: HttpClient,
+    private val sessionStorage: SessionStorage
+) : ApiService {
     private val baseUrl = "https://gkash.onrender.com/api"
 
     override suspend fun registerUser(request: RegisterUserRequest): RegisterUserResponse {
-        return client.post("$baseUrl/auth/register-user") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
-    }
-
-    override suspend fun createPin(request: CreatePinRequest): CreatePinResponse {
-        return client.post("$baseUrl/auth/create-pin") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
+        android.util.Log.d("API_SERVICE", "============================================")
+        android.util.Log.d("API_SERVICE", "registerUser() API call starting")
+        android.util.Log.d("API_SERVICE", "URL: $baseUrl/auth/register")
+        android.util.Log.d("API_SERVICE", "Request body: user_name=${request.user_name}, email=${request.email}")
+        android.util.Log.d("API_SERVICE", "Thread: ${Thread.currentThread().name}")
+        android.util.Log.d("API_SERVICE", "============================================")
+        
+        return try {
+            android.util.Log.d("API_SERVICE", "Sending POST request...")
+            
+            val startTime = System.currentTimeMillis()
+            val response: RegisterUserResponse = client.post("$baseUrl/auth/register") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }.body()
+            val endTime = System.currentTimeMillis()
+            
+            android.util.Log.d("API_SERVICE", "✓ Response received successfully in ${endTime - startTime}ms")
+            android.util.Log.d("API_SERVICE", "success: ${response.success}")
+            android.util.Log.d("API_SERVICE", "message: ${response.message}")
+            android.util.Log.d("API_SERVICE", "token: ${if (response.token != null) "Present" else "NULL"}")
+            android.util.Log.d("API_SERVICE", "user: ${response.user}")
+            
+            response
+        } catch (e: ClientRequestException) {
+            android.util.Log.e("API_SERVICE", "✗ ClientRequestException caught")
+            android.util.Log.e("API_SERVICE", "Status: ${e.response.status}")
+            android.util.Log.e("API_SERVICE", "Description: ${e.response.status.description}")
+            
+            // Handle 4xx/5xx responses and try to deserialize the error response
+            try {
+                val errorResponse = e.response.body<RegisterUserResponse>()
+                android.util.Log.e("API_SERVICE", "Parsed error response: ${errorResponse.message}")
+                errorResponse
+            } catch (parseError: Exception) {
+                android.util.Log.e("API_SERVICE", "✗ Failed to parse error response", parseError)
+                // If we can't parse the error, return a generic error response
+                RegisterUserResponse(
+                    success = false,
+                    message = e.response.status.description
+                )
+            }
+        } catch (e: HttpRequestTimeoutException) {
+            android.util.Log.e("API_SERVICE", "✗ HTTP Request TIMEOUT - Server took too long to respond")
+            android.util.Log.e("API_SERVICE", "This means the server at $baseUrl is not responding")
+            RegisterUserResponse(
+                success = false,
+                message = "Server timeout - please check your internet connection and try again"
+            )
+        } catch (e: Exception) {
+            android.util.Log.e("API_SERVICE", "✗ Unexpected exception in registerUser", e)
+            android.util.Log.e("API_SERVICE", "Exception type: ${e::class.simpleName}")
+            android.util.Log.e("API_SERVICE", "Exception message: ${e.message}")
+            throw e
+        }
     }
 
     override suspend fun login(request: LoginRequest): LoginResponse {
-        // FIX: Changed 'httpClient' to 'client'
         return client.post("$baseUrl/auth/login") {
             contentType(ContentType.Application.Json)
             setBody(request)
@@ -83,11 +144,22 @@ class ApiServiceImpl(private val client: HttpClient) : ApiService {
     }
 
     override suspend fun addPhone(request: AddPhoneRequest, tempToken: String): AddPhoneResponse {
-        return client.post("$baseUrl/auth/add-phone") {
-            contentType(ContentType.Application.Json)
-            header(HttpHeaders.Authorization, "Bearer $tempToken")
-            setBody(request)
-        }.body()
+        return try {
+            val response = client.post("$baseUrl/auth/add-phone") {
+                contentType(ContentType.Application.Json)
+                header(HttpHeaders.Authorization, "Bearer $tempToken")
+                setBody(request)
+            }.body<AddPhoneResponse>()
+            Log.d("API_SERVICE", "Add phone response: $response")
+            response
+        } catch (e: ClientRequestException) {
+            Log.e("API_SERVICE", "Add phone failed: ${e.response.status} ${e.message}")
+            try {
+                e.response.body<AddPhoneResponse>()
+            } catch (parseError: Exception) {
+                AddPhoneResponse(success = false, message = e.response.status.description)
+            }
+        }
     }
 
     override suspend fun createPinKyc(request: CreatePinRequest, tempToken: String): CreatePinResponse {
@@ -107,7 +179,12 @@ class ApiServiceImpl(private val client: HttpClient) : ApiService {
 
     override suspend fun getAccounts(): AccountsApiResponse {
         return try {
-            client.get("$baseUrl/accounts").body<AccountsApiResponse>()
+            val token = sessionStorage.authTokenStream.first()
+            android.util.Log.d("API_SERVICE", "getAccounts - Token: ${if (token != null) "Present" else "NULL"}")
+            
+            client.get("$baseUrl/accounts") {
+                token?.let { header(io.ktor.http.HttpHeaders.Authorization, "Bearer $it") }
+            }.body<AccountsApiResponse>()
         } catch (e: Exception) {
             // FIX: Added parentheses to emptyList()
             AccountsApiResponse(success = false, accounts = emptyList<Account>(), message = e.message)
@@ -116,168 +193,63 @@ class ApiServiceImpl(private val client: HttpClient) : ApiService {
 
     override suspend fun getTotalBalance(): TotalBalanceResponse {
         return try {
-            client.get("$baseUrl/wallet/balance").body<TotalBalanceResponse>()
+            val token = sessionStorage.authTokenStream.first()
+            android.util.Log.d("API_SERVICE", "getTotalBalance - Token: ${if (token != null) "Present" else "NULL"}")
+            
+            client.get("$baseUrl/accounts/total-balance") {
+                token?.let { header(io.ktor.http.HttpHeaders.Authorization, "Bearer $it") }
+            }.body<TotalBalanceResponse>()
         } catch (e: Exception) {
             TotalBalanceResponse(success = false, totalBalance = 0.0, message = e.message)
         }
     }
-}
-class AuthRepositoryImpl(
-    private val apiService: ApiService,
-    private val sessionStorage: SessionStorage
-) : AuthRepository {
 
-    override fun getAuthTokenStream(): Flow<String?> {
-        // Simply return the flow from our session storage. This is now the single source of truth.
-        return sessionStorage.authTokenStream
+    // Profile methods implementation
+    override suspend fun getUserProfile(id: String): UserProfileResponse {
+        val token = sessionStorage.authTokenStream.first()
+        android.util.Log.d("API_SERVICE", "getUserProfile - Token: ${if (token != null) "Present" else "NULL"}")
+        
+        return client.get("$baseUrl/user/$id") {
+            token?.let { header(io.ktor.http.HttpHeaders.Authorization, "Bearer $it") }
+        }.body()
+    }
+    // In ApiServiceImpl class
+
+    override suspend fun getUserAchievements(id: String): UserAchievementsResponse {
+        return try {
+            UserAchievementsResponse(
+                success = true,
+                lessonsCompleted = 5,
+                learningStreak = 3,
+                savingsGoalsAchieved = 2,
+                totalTimeSpent = "2h 30m",
+                level = "Beginner"
+            )
+        } catch (e: Exception) {
+            UserAchievementsResponse(success = false, message = e.message)
+        }
     }
 
-    override suspend fun registerUser(
+
+    override suspend fun updateUserProfile(
+        id: String,
         name: String,
-        phoneNumber: String,
-        idNumber: String
-    ): Result<RegisterUserResponse> {
+        email: String,
+        phoneNumber: String
+    ): BaseResponse {
         return try {
-            val request = RegisterUserRequest(name, phoneNumber, idNumber)
-            val response = apiService.registerUser(request)
-            
-            // Save temp token if provided by the API
-            sessionStorage.saveAuthToken(response.temp_token)
-            Log.d("AuthFlow", "Temp token saved after user registration")
-            
-            Result.success(response)
+            // For now, just return success
+            BaseResponse(success = true)
         } catch (e: Exception) {
-            Log.e("AuthFlow", "Register user error", e)
-            Result.failure(e)
+            BaseResponse(success = false, message = e.message)
         }
     }
-
-    override suspend fun createPin(userId: String, pin: String): Result<CreatePinResponse> {
-        return try {
-            val request = CreatePinRequest(pin)
-            val response = apiService.createPin(request)
-            
-            // Save token and user data if provided by the API
-            sessionStorage.saveSession(token = response.token, userId = response.user.user_nationalId)
-            Log.d("AuthFlow", "Token saved after PIN creation")
-            
-            Result.success(response)
-        } catch (e: Exception) {
-            Log.e("AuthFlow", "Create PIN error", e)
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun login(phoneNumber: String, pin: String): Result<LoginResponse> {
-        return try {
-            // For backward compatibility, treat phoneNumber as nationalId for now
-            val request = LoginRequest(phoneNumber, pin)
-            val response = apiService.loginKyc(request)
-
-            // Handle the updated LoginResponse structure
-            if (response.success) {
-                sessionStorage.saveSession(token = response.token, userId = response.user.user_nationalId)
-                Log.d("AuthFlow", "Session saved (token & user ID).")
-                Result.success(response)
-            } else {
-                Result.failure(Exception(response.message))
-            }
-
-        } catch (e: Exception) {
-            Log.e("AuthFlow", "Login exception", e)
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun logout() {
-        // On logout, clear all session data (token and user ID).
-        // The UI will react automatically because it's observing the token flow.
-        sessionStorage.clearSession()
-        Log.d("AuthFlow", "User logged out, session cleared.")
-    }
-
-    // KYC Methods Implementation
-    override suspend fun registerWithId(
-        idImageBytes: ByteArray,
-        selfieBytes: ByteArray
-    ): Result<KycIdUploadResponse> {
-        return try {
-            val response = apiService.registerWithId(idImageBytes, selfieBytes)
-            
-            // Save temp token for next steps
-            sessionStorage.saveAuthToken(response.temp_token)
-            Log.d("KYC", "Temp token saved after ID verification")
-            
-            Result.success(response)
-        } catch (e: Exception) {
-            Log.e("KYC", "Register with ID error", e)
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun addPhone(phoneNumber: String): Result<AddPhoneResponse> {
-        return try {
-            val tempToken = sessionStorage.authTokenStream.first()
-                ?: return Result.failure(Exception("No temp token found"))
-            
-            val request = AddPhoneRequest(phoneNumber)
-            val response = apiService.addPhone(request, tempToken)
-            
-            Log.d("KYC", "Phone number added successfully")
-            Result.success(response)
-        } catch (e: Exception) {
-            Log.e("KYC", "Add phone error", e)
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun createPinKyc(pin: String): Result<CreatePinResponse> {
-        return try {
-            val tempToken = sessionStorage.authTokenStream.first()
-                ?: return Result.failure(Exception("No temp token found"))
-            
-            val request = CreatePinRequest(pin)
-            val response = apiService.createPinKyc(request, tempToken)
-            
-            // Save final token and user data
-            sessionStorage.saveSession(token = response.token, userId = response.user.user_nationalId)
-            Log.d("KYC", "KYC registration completed, final token saved")
-            
-            // Validate token persistence by reading it back
-            kotlinx.coroutines.delay(500) // Small delay to ensure DataStore persistence
-            val savedToken = sessionStorage.authTokenStream.first()
-            if (savedToken == response.token) {
-                Log.d("KYC", "Token persistence validated successfully")
-            } else {
-                Log.w("KYC", "Token persistence validation failed. Expected: ${response.token.substring(0, 10)}..., Got: ${savedToken?.substring(0, 10) ?: "null"}...")
-            }
-            
-            Result.success(response)
-        } catch (e: Exception) {
-            Log.e("KYC", "Create PIN KYC error", e)
-            Result.failure(e)
-        }
-    }
-
-    override suspend fun loginWithNationalId(
-        nationalId: String,
-        pin: String
-    ): Result<LoginResponse> {
-        return try {
-            val request = LoginRequest(nationalId, pin)
-            val response = apiService.loginKyc(request)
-
-            if (response.success) {
-                sessionStorage.saveSession(token = response.token, userId = response.user.user_nationalId)
-                Log.d("KYC", "Login successful, session saved")
-                Result.success(response)
-            } else {
-                Result.failure(Exception(response.message))
-            }
-        } catch (e: Exception) {
-            Log.e("KYC", "Login with National ID error", e)
-            Result.failure(e)
-        }
+    
+    override suspend fun createPin(request: CreatePinRequest): CreatePinResponse {
+        return client.post("$baseUrl/auth/create-pin") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
     }
 }
 

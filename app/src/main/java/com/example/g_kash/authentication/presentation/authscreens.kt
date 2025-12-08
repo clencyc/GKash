@@ -14,6 +14,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.draw.clip
@@ -21,6 +26,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Row
@@ -30,15 +39,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,17 +61,20 @@ enum class LoginStep {
 
 @Composable
 fun CreateAccountScreen(
-    onNavigateToLogin: () -> Unit,
-    onAccountCreated: (userId: String) -> Unit,
-    onNavigateBack: () -> Unit
+    onAccountCreated: (fullName: String, email: String, pin: String, confirmPin: String) -> Unit,
+    onNavigateBack: () -> Unit,
+    isLoading: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
-    var name by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
-    var idNumber by remember { mutableStateOf("") }
+    var fullName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var pin by remember { mutableStateOf("") }
+    var confirmPin by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
         shape = RoundedCornerShape(12.dp),
@@ -76,7 +83,8 @@ fun CreateAccountScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -108,31 +116,69 @@ fun CreateAccountScreen(
                 fontWeight = FontWeight.Bold
             )
 
+            Text(
+                text = "Enter your details to create a new account",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // Full Name Field
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
+                value = fullName,
+                onValueChange = { fullName = it },
                 label = { Text("Full Name") },
                 modifier = Modifier.fillMaxWidth(),
-                isError = name.isBlank() && errorMessage != null
+                isError = fullName.isBlank() && errorMessage != null,
+                leadingIcon = {
+                    Icon(Icons.Default.Person, contentDescription = "Name")
+                }
             )
 
+            // Email Field
             OutlinedTextField(
-                value = phoneNumber,
-                onValueChange = {
-                    if (it.length <= 10) phoneNumber = it.filter { char -> char.isDigit() }
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email Address") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = email.isBlank() && errorMessage != null,
+                leadingIcon = {
+                    Icon(Icons.Default.Email, contentDescription = "Email")
                 },
-                label = { Text("Phone Number") },
-                modifier = Modifier.fillMaxWidth(),
-                isError = phoneNumber.length < 10 && errorMessage != null,
-                supportingText = { if (phoneNumber.length < 10 && errorMessage != null) Text("Enter a valid 10-digit phone number") }
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 
+            // PIN Field
             OutlinedTextField(
-                value = idNumber,
-                onValueChange = { idNumber = it.filter { char -> char.isDigit() } },
-                label = { Text("ID Number") },
+                value = pin,
+                onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pin = it },
+                label = { Text("PIN (4 digits)") },
                 modifier = Modifier.fillMaxWidth(),
-                isError = idNumber.isBlank() && errorMessage != null
+                isError = pin.length != 4 && errorMessage != null,
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = "PIN")
+                },
+                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                trailingIcon = {
+                    val image = if (showPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                    IconButton(onClick = { showPassword = !showPassword }) {
+                        Icon(image, contentDescription = "Toggle PIN visibility")
+                    }
+                }
+            )
+
+            // Confirm PIN Field
+            OutlinedTextField(
+                value = confirmPin,
+                onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) confirmPin = it },
+                label = { Text("Confirm PIN") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = confirmPin.length != 4 && errorMessage != null,
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = "Confirm PIN")
+                },
+                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
             errorMessage?.let {
@@ -147,12 +193,14 @@ fun CreateAccountScreen(
             Button(
                 onClick = {
                     when {
-                        name.isBlank() -> errorMessage = "Name is required"
-                        phoneNumber.length < 10 -> errorMessage = "Invalid phone number"
-                        idNumber.isBlank() -> errorMessage = "ID Number is required"
+                        fullName.isBlank() -> errorMessage = "Full name is required"
+                        email.isBlank() -> errorMessage = "Email is required"
+                        !email.contains("@") -> errorMessage = "Please enter a valid email"
+                        pin.length != 4 -> errorMessage = "PIN must be 4 digits"
+                        confirmPin != pin -> errorMessage = "PINs do not match"
                         else -> {
                             errorMessage = null
-                            onAccountCreated("user_${idNumber}")
+                            onAccountCreated(fullName, email, pin, confirmPin)
                         }
                     }
                 },
@@ -160,20 +208,20 @@ fun CreateAccountScreen(
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp),
-                enabled = name.isNotBlank() && phoneNumber.length >= 10 && idNumber.isNotBlank()
+                enabled = fullName.isNotBlank() && email.isNotBlank() && pin.length == 4 && confirmPin == pin && !isLoading
             ) {
-                Text(
-                    text = "Continue",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            TextButton(onClick = onNavigateToLogin) {
-                Text(
-                    text = "Already have an account? Log In",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text(
+                        text = "Create Account",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }

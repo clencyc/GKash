@@ -1,13 +1,15 @@
 package com.example.g_kash.otp.data
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 
 /**
  * Request model for sending OTP
  */
 @Serializable
 data class SendOtpRequest(
-    val phone: String,
+    @SerialName("phone")
+    val phoneNumber: String,
     val name: String
 )
 
@@ -25,7 +27,8 @@ data class SendOtpResponse(
  */
 @Serializable
 data class VerifyOtpRequest(
-    val phone: String,
+    @SerialName("phone")
+    val phoneNumber: String,
     val otp: String
 )
 

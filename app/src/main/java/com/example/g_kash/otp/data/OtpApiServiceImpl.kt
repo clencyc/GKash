@@ -5,8 +5,16 @@ import com.example.g_kash.otp.domain.OtpApiService
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.plugins.*
 import io.ktor.http.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import io.ktor.client.request.setBody
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Implementation of OTP API service using Ktor HTTP client
@@ -19,34 +27,72 @@ class OtpApiServiceImpl(
     companion object {
         private const val TAG = "OtpApiService"
         private const val BASE_URL = "https://tiara-connect-otp.onrender.com"
-        private const val SEND_OTP_ENDPOINT = "$BASE_URL/api/auth/send-otp"
-        private const val VERIFY_OTP_ENDPOINT = "$BASE_URL/api/auth/verify-otp"
+        private const val SEND_OTP_ENDPOINT = "$BASE_URL/api/otp/send"
+        private const val VERIFY_OTP_ENDPOINT = "$BASE_URL/api/otp/verify"
     }
 
     override suspend fun sendOtp(phone: String, name: String): Result<SendOtpResponse> {
         return try {
-            Log.d(TAG, "Sending OTP to phone: $phone, name: $name")
+            Log.d(TAG, "⏳ Sending OTP request...")
             
             // Ensure phone number includes country code
             val formattedPhone = if (phone.startsWith("+")) phone else "+254${phone.removePrefix("0")}"
-            Log.d(TAG, "Formatted phone number: $formattedPhone")
+            Log.d(TAG, "Formatted phone: $formattedPhone")
             
-            val request = SendOtpRequest(
-                phone = formattedPhone,
-                name = name.ifBlank { "User" }
-            )
+            val jsonBody = """{"phone":"$formattedPhone","name":"$name"}"""
             
-            val response = httpClient.post(SEND_OTP_ENDPOINT) {
-                contentType(ContentType.Application.Json)
-                setBody(request)
+            var responseText = ""
+            var statusCodeValue = 0
+            try {
+                val response = httpClient.post(SEND_OTP_ENDPOINT) {
+                    contentType(ContentType.Application.Json)
+                    setBody(jsonBody)
+                    timeout {
+                        requestTimeoutMillis = 60000 // 60 seconds for OTP send
+                    }
+                }
+                responseText = response.body()
+                statusCodeValue = response.status.value
+            } catch (e: ClientRequestException) { // 4xx
+                responseText = e.response.body()
+                statusCodeValue = e.response.status.value
+                Log.w(TAG, "Send OTP got 4xx: ${e.response.status}")
+            } catch (e: ServerResponseException) { // 5xx
+                responseText = e.response.body()
+                statusCodeValue = e.response.status.value
+                Log.w(TAG, "Send OTP got 5xx: ${e.response.status}")
             }
             
-            val otpResponse: SendOtpResponse = response.body()
+            // Log raw response for debugging
+            Log.d(TAG, "Raw OTP API response: $responseText")
+            Log.d(TAG, "Response status code: $statusCodeValue")
+            
+            // Parse the response JSON to check the success field
+            val (isSuccess, failureMessage) = try {
+                val jsonElement = Json.parseToJsonElement(responseText)
+                val jsonObj = jsonElement.jsonObject
+                val success = jsonObj["success"]?.jsonPrimitive?.content?.toBoolean() ?: false
+                val message = jsonObj["message"]?.jsonPrimitive?.content ?: "Failed to send OTP"
+                
+                Log.d(TAG, "Parsed response - success: $success, message: $message")
+                
+                success to message
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to parse response JSON, checking text: ${e.message}")
+                // Fallback: check if response contains success indicators
+                val ok = responseText.contains("\"success\":true")
+                ok to "Failed to send OTP"
+            }
+            
+            val otpResponse = SendOtpResponse(
+                success = isSuccess,
+                message = if (isSuccess) "OTP sent successfully" else failureMessage
+            )
             
             if (otpResponse.success) {
-                Log.d(TAG, "OTP sent successfully to $formattedPhone")
+                Log.d(TAG, "✓ OTP sent successfully to $formattedPhone")
             } else {
-                Log.w(TAG, "Failed to send OTP: ${otpResponse.message}")
+                Log.w(TAG, "✗ Failed to send OTP. Response: $responseText")
             }
             
             Result.success(otpResponse)
@@ -67,17 +113,48 @@ class OtpApiServiceImpl(
             val formattedPhone = if (phone.startsWith("+")) phone else "+254${phone.removePrefix("0")}"
             Log.d(TAG, "Formatted phone number: $formattedPhone")
             
-            val request = VerifyOtpRequest(
-                phone = formattedPhone,
-                otp = otp
-            )
+            // Manually create JSON with "phone" field for verify endpoint (matches backend)
+            val jsonBody = """{"phone":"$formattedPhone","otp":"$otp"}"""
+            Log.d(TAG, "Sending OTP verify request body: $jsonBody")
             
-            val response = httpClient.post(VERIFY_OTP_ENDPOINT) {
-                contentType(ContentType.Application.Json)
-                setBody(request)
+            var responseText = ""
+            var statusCodeValue = 0
+            try {
+                val response = httpClient.post(VERIFY_OTP_ENDPOINT) {
+                    contentType(ContentType.Application.Json)
+                    setBody(jsonBody)
+                    timeout {
+                        requestTimeoutMillis = 20000 // 20 seconds for OTP verify (faster since server should be awake)
+                    }
+                }
+                responseText = response.body()
+                statusCodeValue = response.status.value
+            } catch (e: ClientRequestException) {
+                responseText = e.response.body()
+                statusCodeValue = e.response.status.value
+                Log.w(TAG, "Verify OTP got 4xx: ${e.response.status}")
+            } catch (e: ServerResponseException) {
+                responseText = e.response.body()
+                statusCodeValue = e.response.status.value
+                Log.w(TAG, "Verify OTP got 5xx: ${e.response.status}")
             }
             
-            val verifyResponse: VerifyOtpResponse = response.body()
+            Log.d(TAG, "Raw OTP verify response: $responseText")
+            Log.d(TAG, "Verify response status: $statusCodeValue")
+            
+            val responseJson = try { Json.parseToJsonElement(responseText).jsonObject } catch (_: Exception) { null }
+            val backendMessage = responseJson?.get("message")?.jsonPrimitive?.content
+            val backendValid = responseJson?.get("valid")?.jsonPrimitive?.content?.toBooleanStrictOrNull()
+
+            val isSuccess = (statusCodeValue in 200..299) && (backendValid != false)
+            val verifyResponse = VerifyOtpResponse(
+                success = isSuccess,
+                message = when {
+                    isSuccess -> "OTP verified successfully"
+                    backendMessage != null -> backendMessage
+                    else -> "OTP verification failed"
+                }
+            )
             
             if (verifyResponse.success) {
                 Log.d(TAG, "OTP verified successfully for $formattedPhone")

@@ -20,17 +20,17 @@ data class Account(
 
 @Serializable
 data class TotalBalanceResponse(
-    val success: Boolean,
+    val success: Boolean = false,
     @SerialName("total_balance")
-    val totalBalance: Double,
+    val totalBalance: Double = 0.0,
     val message: String? = null
 )
 
 
 @Serializable
 data class AccountsApiResponse( // Renamed for clarity
-    val success: Boolean,
-    val accounts: List<Account>, // Plural "accounts"
+    val success: Boolean = false,
+    val accounts: List<Account> = emptyList(), // Plural "accounts"
     val message: String? = null
 )
 

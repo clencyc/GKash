@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "22897836800",
+    "project_id": "gkash-77c3b",
+    "storage_bucket": "gkash-77c3b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:22897836800:android:4821227ab58dc53fea69e5",
+        "android_client_info": {
+          "package_name": "com.example.g_kash"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0Rj-nSeoWjCmLKUacK-SXPkLtta8syCU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

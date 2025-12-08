@@ -1,15 +1,18 @@
 package com.example.g_kash.accounts.data
 
+import com.example.g_kash.data.SessionStorage
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import kotlinx.coroutines.flow.first
 
 /**
  * API Service for account-related operations, aligned with API documentation.
  */
 class AccountsApiService(
     private val client: HttpClient,
+    private val sessionStorage: SessionStorage,
     // FIX: Base URL should probably not include /api here if you add it in every
     private val baseUrl: String = "https://gkash.onrender.com/api"
 ) {
@@ -67,19 +70,27 @@ class AccountsApiService(
      */
     suspend fun createAccount(request: CreateAccountRequest): Result<Account> {
         return try {
+            val token = sessionStorage.authTokenStream.first()
+            android.util.Log.d("ACCOUNTS_API", "createAccount - Token: ${if (token != null) "Present" else "NULL"}")
+            android.util.Log.d("ACCOUNTS_API", "Creating account type: ${request.accountType}")
+            
             val response = client.post("$baseUrl/accounts") {
                 contentType(ContentType.Application.Json)
+                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
                 setBody(request)
             }
 
             if (response.status == HttpStatusCode.Created) {
                 // Assuming the API returns the newly created account object
                 val createdAccount: Account = response.body()
+                android.util.Log.d("ACCOUNTS_API", "✓ Account created successfully: ${createdAccount.accountType}")
                 Result.success(createdAccount)
             } else {
+                android.util.Log.e("ACCOUNTS_API", "✗ Failed to create account: ${response.status}")
                 Result.failure(Exception("Failed to create account: ${response.status}"))
             }
         } catch (e: Exception) {
+            android.util.Log.e("ACCOUNTS_API", "✗ Exception creating account", e)
             Result.failure(e)
         }
     }

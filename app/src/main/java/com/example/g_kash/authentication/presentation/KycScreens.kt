@@ -1,6 +1,7 @@
 package com.example.g_kash.authentication.presentation
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -217,6 +218,11 @@ fun KycAddPhoneScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Log when screen is displayed
+    LaunchedEffect(Unit) {
+        Log.d("KYC_UI", "KycAddPhoneScreen is now displayed")
+    }
+
     // Validate phone number
     LaunchedEffect(phoneNumber) {
         isValidPhone = phoneNumber.length >= 10
@@ -429,174 +435,186 @@ fun KycVerifyPhoneScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(paddingValues),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Back button and progress
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    BackButton(onClick = onNavigateBack)
+                    // Back button and progress
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BackButton(onClick = onNavigateBack)
 
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "Step 3 of 4",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextLight,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "75%",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryPink
-                        )
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "Step 3 of 4",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextLight,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "75%",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryPink
+                            )
+                        }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    LinearProgressIndicator(
+                        progress = { 0.75f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = PrimaryPink,
+                        trackColor = Color(0xFFFFE0EB),
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Pulsing shield icon
+                    Box(contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .scale(scale)
+                                .alpha(0.2f)
+                                .background(
+                                    brush = Brush.radialGradient(
+                                        colors = listOf(AccentPink, Color.Transparent)
+                                    ),
+                                    shape = CircleShape
+                                )
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .size(70.dp)
+                                .background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(LightPink, Color(0xFFFFE0EB))
+                                    ),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = "Verify",
+                                modifier = Modifier.size(32.dp),
+                                tint = PrimaryPink
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Enter Verification Code",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextDark,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Enter the 6-digit code sent to\n$phoneNumber",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextLight,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // OTP Input boxes
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    ) {
+                        repeat(6) { index ->
+                            OtpDigitBox(
+                                digit = if (index < otp.length) otp[index].toString() else "",
+                                isFocused = index == otp.length,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Number pad
+                    NumberPadForOtp(
+                        onNumberClick = { digit ->
+                            if (otp.length < 6) {
+                                otp += digit
+                                if (otp.length == 6) {
+                                    // Auto-verify when complete
+                                    onOtpVerified(otp)
+                                }
+                            }
+                        },
+                        onBackspaceClick = {
+                            if (otp.isNotEmpty()) {
+                                otp = otp.dropLast(1)
+                            }
+                        }
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LinearProgressIndicator(
-                    progress = { 0.75f },
+                // Button fixed at bottom
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    color = PrimaryPink,
-                    trackColor = Color(0xFFFFE0EB),
-                )
-
-                Spacer(modifier = Modifier.height(48.dp))
-
-                // Pulsing shield icon
-                Box(contentAlignment = Alignment.Center) {
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .scale(scale)
-                            .alpha(0.2f)
-                            .background(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(AccentPink, Color.Transparent)
-                                ),
-                                shape = CircleShape
-                            )
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .background(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(LightPink, Color(0xFFFFE0EB))
-                                ),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = "Verify",
-                            modifier = Modifier.size(36.dp),
-                            tint = PrimaryPink
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = "Enter Verification Code",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Enter the 6-digit code sent to\n$phoneNumber",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = TextLight,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 22.sp
-                )
-
-                Spacer(modifier = Modifier.height(40.dp))
-
-                // OTP Input boxes
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    repeat(6) { index ->
-                        OtpDigitBox(
-                            digit = if (index < otp.length) otp[index].toString() else "",
-                            isFocused = index == otp.length,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Number pad
-                NumberPadForOtp(
-                    onNumberClick = { digit ->
-                        if (otp.length < 6) {
-                            otp += digit
+                    // Verify button
+                    PrimaryButton(
+                        text = "Verify Code",
+                        icon = Icons.Default.CheckCircle,
+                        enabled = otp.length == 6 && !isLoading,
+                        isLoading = isLoading,
+                        onClick = {
                             if (otp.length == 6) {
-                                // Auto-verify when complete
                                 onOtpVerified(otp)
+                            } else {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Please enter the complete 6-digit code")
+                                }
                             }
                         }
-                    },
-                    onBackspaceClick = {
-                        if (otp.isNotEmpty()) {
-                            otp = otp.dropLast(1)
-                        }
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Verify button
-                PrimaryButton(
-                    text = "Verify Code",
-                    icon = Icons.Default.CheckCircle,
-                    enabled = otp.length == 6 && !isLoading,
-                    isLoading = isLoading,
-                    onClick = {
-                        if (otp.length == 6) {
-                            onOtpVerified(otp)
-                        } else {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Please enter the complete 6-digit code")
-                            }
-                        }
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                TextButton(
-                    onClick = {
-                        onResendCode()
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Verification code resent!")
-                        }
-                    }
-                ) {
-                    Text(
-                        "Resend Code",
-                        color = PrimaryPink,
-                        fontWeight = FontWeight.Medium
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    TextButton(
+                        onClick = {
+                            onResendCode()
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Verification code resent!")
+                            }
+                        }
+                    ) {
+                        Text(
+                            "Resend Code",
+                            color = PrimaryPink,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }
