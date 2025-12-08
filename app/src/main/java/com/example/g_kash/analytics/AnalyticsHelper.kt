@@ -34,4 +34,37 @@ object AnalyticsHelper {
     fun setUserProperty(property: String, value: String, firebaseAnalytics: FirebaseAnalytics) {
         firebaseAnalytics.setUserProperty(property, value)
     }
+
+    // Common Events
+    object Events {
+        // Screen Views
+        const val SCREEN_WELCOME = "screen_welcome"
+        const val SCREEN_CREATE_ACCOUNT = "screen_create_account"
+        const val SCREEN_ADD_PHONE = "screen_add_phone"
+        const val SCREEN_VERIFY_PHONE = "screen_verify_phone"
+        const val SCREEN_CONFIRM_PIN = "screen_confirm_pin"
+        const val SCREEN_REGISTRATION_COMPLETE = "screen_registration_complete"
+        
+        // Registration Events
+        const val ACCOUNT_CREATED = "account_created"
+        const val PHONE_ADDED = "phone_added"
+        const val PHONE_VERIFIED = "phone_verified"
+        const val OTP_SENT = "otp_sent"
+        const val OTP_VERIFIED = "otp_verified"
+        const val PIN_CONFIRMED = "pin_confirmed"
+        const val REGISTRATION_COMPLETED = "registration_completed"
+        
+        // User Actions
+        const val BUTTON_CLICKED = "button_clicked"
+        const val FIELD_FILLED = "field_filled"
+        const val ERROR_OCCURRED = "error_occurred"
+        const val RESEND_OTP = "resend_otp"
+        const val BACK_NAVIGATION = "back_navigation"
+    }
+
+    object UserProperties {
+        const val REGISTRATION_STAGE = "registration_stage"
+        const val PHONE_VERIFIED = "phone_verified"
+        const val ACCOUNT_STATUS = "account_status"
+    }
 }

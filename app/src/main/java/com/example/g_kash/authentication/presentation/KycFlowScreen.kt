@@ -175,7 +175,7 @@ fun KycCompletionScreen(
         Card(
             modifier = Modifier.size(120.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFE8F5E8)
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
             ),
             shape = androidx.compose.foundation.shape.CircleShape
         ) {
@@ -187,7 +187,7 @@ fun KycCompletionScreen(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = "Success",
                     modifier = Modifier.size(64.dp),
-                    tint = Color(0xFF4CAF50)
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -227,8 +227,8 @@ fun KycCompletionScreen(
                 .height(48.dp),
             shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF6366F1),
-                contentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
             Text(
@@ -269,7 +269,7 @@ fun KycLoginScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFFF5F7FA),
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { paddingValues ->
         Column(
@@ -310,7 +310,7 @@ fun KycLoginScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(8.dp)
                 ) {
                     Column(
@@ -377,8 +377,8 @@ fun KycLoginScreen(
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                             enabled = nationalId.length >= 8,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF6366F1),
-                                contentColor = Color.White
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             )
                         ) {
                             Text(

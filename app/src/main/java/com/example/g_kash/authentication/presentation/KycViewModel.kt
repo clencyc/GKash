@@ -7,9 +7,11 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.g_kash.analytics.AnalyticsHelper
 import com.example.g_kash.authentication.data.ExtractedIdData
 import com.example.g_kash.authentication.domain.*
 import com.example.g_kash.authentication.presentation.KycStep
+import com.google.firebase.analytics.FirebaseAnalytics
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -61,7 +63,8 @@ class KycViewModel(
     private val sessionStorage: com.example.g_kash.data.SessionStorage,
     private val sendOtpUseCase: com.example.g_kash.otp.domain.SendOtpUseCase,
     private val verifyOtpUseCase: com.example.g_kash.otp.domain.VerifyOtpUseCase,
-    private val createAccountUseCase: com.example.g_kash.authentication.domain.CreateAccountUseCase
+    private val createAccountUseCase: com.example.g_kash.authentication.domain.CreateAccountUseCase,
+    private val firebaseAnalytics: FirebaseAnalytics
 ) : ViewModel() {
 
     private val _uiState = mutableStateOf(KycUiState())
@@ -118,6 +121,19 @@ class KycViewModel(
                                 progress = 0.40f
                             )
                             Log.d("KYC_REG", "✓ Account created successfully, navigating to ADD_PHONE")
+                            
+                            // Analytics: Log account creation
+                            AnalyticsHelper.logEvent(
+                                AnalyticsHelper.Events.ACCOUNT_CREATED,
+                                mapOf("email" to email),
+                                firebaseAnalytics
+                            )
+                            AnalyticsHelper.setUserProperty(
+                                AnalyticsHelper.UserProperties.REGISTRATION_STAGE,
+                                "phone_verification",
+                                firebaseAnalytics
+                            )
+                            
                             _events.emit(KycEvent.NavigateToNext)
                             _events.emit(KycEvent.ShowSuccess("Account created! Now add your phone number."))
                         } else {
@@ -126,6 +142,14 @@ class KycViewModel(
                                 error = response.message ?: "Failed to create account"
                             )
                             Log.e("KYC_REG", "✗ Account creation failed: ${response.message}")
+                            
+                            // Analytics: Log error
+                            AnalyticsHelper.logEvent(
+                                AnalyticsHelper.Events.ERROR_OCCURRED,
+                                mapOf("stage" to "account_creation", "error" to (response.message ?: "Unknown error")),
+                                firebaseAnalytics
+                            )
+                            
                             _events.emit(KycEvent.ShowError(response.message ?: "Failed to create account"))
                         }
                     },
@@ -197,6 +221,19 @@ class KycViewModel(
                                 progress = 0.66f
                             )
                             Log.d("KYC_OTP", "✓ OTP sent successfully to: $phoneNumber")
+                            
+                            // Analytics: Log phone added and OTP sent
+                            AnalyticsHelper.logEvent(
+                                AnalyticsHelper.Events.PHONE_ADDED,
+                                mapOf("phone" to phoneNumber.takeLast(4)),
+                                firebaseAnalytics
+                            )
+                            AnalyticsHelper.logEvent(
+                                AnalyticsHelper.Events.OTP_SENT,
+                                mapOf("phone" to phoneNumber.takeLast(4)),
+                                firebaseAnalytics
+                            )
+                            
                             _events.emit(KycEvent.NavigateToNext)
                             _events.emit(KycEvent.ShowSuccess("Verification code sent! Please check your SMS."))
                         } else {
@@ -319,6 +356,23 @@ class KycViewModel(
                             isPinCreated = true
                         )
                         Log.d("KYC_VERIFY", "✓ UI state updated - registration complete")
+                        
+                        // Analytics: Log OTP verification and registration completion
+                        AnalyticsHelper.logEvent(
+                            AnalyticsHelper.Events.OTP_VERIFIED,
+                            mapOf("phone" to phoneNumber.takeLast(4)),
+                            firebaseAnalytics
+                        )
+                        AnalyticsHelper.logEvent(
+                            AnalyticsHelper.Events.REGISTRATION_COMPLETED,
+                            mapOf("email" to email, "phone" to phoneNumber.takeLast(4)),
+                            firebaseAnalytics
+                        )
+                        AnalyticsHelper.setUserProperty(
+                            AnalyticsHelper.UserProperties.REGISTRATION_STAGE,
+                            "completed",
+                            firebaseAnalytics
+                        )
                         
                         // Emit success message
                         _events.emit(KycEvent.ShowSuccess("Registration completed successfully!"))
