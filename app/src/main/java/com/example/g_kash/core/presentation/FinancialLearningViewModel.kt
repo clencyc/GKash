@@ -48,9 +48,7 @@ class FinancialLearningViewModel(
     private fun loadCategories() {
         val categories = listOf(
             LearningCategory("get_started", "Get Started", "Basics of Savings", Icons.Default.Home),
-            LearningCategory("saving_basics", "Saving Basics", "Build your wealth", Icons.Default.AccountBalance),
-            LearningCategory("investment", "Investment Knowledge", "Increasing wealth", Icons.Default.TrendingUp),
-            LearningCategory("security", "Security", "Protect Savings", Icons.Default.Lock)
+
         )
         _uiState.value = _uiState.value.copy(categories = categories)
     }

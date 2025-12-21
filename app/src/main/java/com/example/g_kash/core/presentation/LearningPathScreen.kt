@@ -18,6 +18,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.FrameLayout
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +36,7 @@ fun LearningPathScreen(
     onNavigateBack: () -> Unit
 ) {
     val category = getLearningPathData(categoryId)
+    var selectedLesson by remember { mutableStateOf<Lesson?>(null) }
     
     Column(
         modifier = Modifier
@@ -61,7 +72,8 @@ fun LearningPathScreen(
             items(category.modules) { module ->
                 LearningModuleCard(
                     module = module,
-                    onClick = { /* Handle module click */ }
+                    onClick = { /* Handle module click */ },
+                    onLessonClick = { lesson -> selectedLesson = lesson }
                 )
             }
             
@@ -87,6 +99,13 @@ fun LearningPathScreen(
                 ProgressSection(progress = category.progress)
             }
         }
+    }
+
+    selectedLesson?.let { lesson ->
+        LessonPlayerOverlay(
+            lesson = lesson,
+            onDismiss = { selectedLesson = null }
+        )
     }
 }
 
@@ -219,7 +238,8 @@ fun StatItem(
 @Composable
 fun LearningModuleCard(
     module: LearningModule,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLessonClick: (Lesson) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -285,6 +305,13 @@ fun LearningModuleCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     modifier = Modifier.padding(top = 4.dp)
                 )
+
+                if (module.lessons.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    module.lessons.forEach { lesson ->
+                        LessonRow(lesson = lesson, onClick = { onLessonClick(lesson) })
+                    }
+                }
             }
             
             if (module.status != ModuleStatus.LOCKED) {
@@ -296,6 +323,267 @@ fun LearningModuleCard(
             }
         }
     }
+}
+
+@Composable
+private fun LessonRow(lesson: Lesson, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = lesson.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = when (lesson.type) {
+                        LessonType.VIDEO -> "Video"
+                        LessonType.ARTICLE -> "Article"
+                        LessonType.INTERACTIVE -> "Interactive"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = when (lesson.type) {
+                    LessonType.VIDEO -> Icons.Default.PlayCircleOutline
+                    LessonType.ARTICLE -> Icons.Default.MenuBook
+                    LessonType.INTERACTIVE -> Icons.Default.AutoAwesome
+                },
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LessonPlayerOverlay(lesson: Lesson, onDismiss: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = {
+                    Text(lesson.title, fontWeight = FontWeight.Bold)
+                },
+                navigationIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+            )
+            if (lesson.type == LessonType.VIDEO) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    VideoPlayer(
+                        url = lesson.content,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f)
+                    )
+                }
+            } else {
+                Text(
+                    text = lesson.content,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoPlayer(url: String, modifier: Modifier = Modifier.fillMaxWidth().height(220.dp)) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val embedUrl = remember(url) { toEmbedUrl(url) }
+    val html = remember(embedUrl) {
+        """
+        <html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="margin:0;padding:0;background-color:black;">
+        <iframe
+            width="100%"
+            height="100%"
+            src="$embedUrl"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+        </iframe>
+        </body></html>
+        """.trimIndent()
+    }
+
+    val activity = remember { context as? android.app.Activity }
+
+    // Root container to host WebView and potential fullscreen custom view
+    val rootContainer = remember {
+        FrameLayout(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setBackgroundColor(android.graphics.Color.BLACK)
+        }
+    }
+
+    // The WebView instance
+    val webView = remember {
+        WebView(context).apply {
+            setBackgroundColor(android.graphics.Color.BLACK)
+            keepScreenOn = true
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.cacheMode = WebSettings.LOAD_DEFAULT
+            settings.mediaPlaybackRequiresUserGesture = false
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+            // Prefer hardware layer in overlay; fallback to software only if needed.
+            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+            webViewClient = object : WebViewClient() {
+                private fun shouldStayInFrame(targetUrl: String): Boolean {
+                    return targetUrl.contains("/embed/") || targetUrl.contains("/iframe_api")
+                }
+
+                override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
+                    val target = request?.url ?: return false
+                    val host = target.host.orEmpty()
+                    val allowed = host.contains("youtube.com") ||
+                        host.contains("youtube-nocookie.com") ||
+                        host.contains("googlevideo.com") ||
+                        host.contains("google.com") ||
+                        host.contains("gstatic.com") ||
+                        host.contains("ytimg.com") ||
+                        host.contains("ggpht.com") ||
+                        host.contains("googleusercontent.com")
+
+                    if (!allowed) return true
+
+                    if (!shouldStayInFrame(target.toString())) {
+                        view?.loadUrl(embedUrl)
+                        return true
+                    }
+
+                    return false
+                }
+
+                @Suppress("DEPRECATION")
+                override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                    val target = url ?: return false
+                    val allowed = target.contains("youtube.com") || target.contains("youtube-nocookie.com") || target.contains("googlevideo.com") || target.contains("google.com") || target.contains("gstatic.com") || target.contains("ytimg.com") || target.contains("ggpht.com") || target.contains("googleusercontent.com")
+
+                    if (!allowed) return true
+
+                    if (!shouldStayInFrame(target)) {
+                        view?.loadUrl(embedUrl)
+                        return true
+                    }
+
+                    return false
+                }
+            }
+            // Fullscreen custom view handling
+            webChromeClient = object : WebChromeClient() {
+                private var customView: View? = null
+                private var customViewCallback: CustomViewCallback? = null
+
+                override fun onPermissionRequest(request: PermissionRequest?) {
+                    request?.grant(request.resources)
+                }
+
+                override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                    if (customView != null) {
+                        onHideCustomView()
+                    }
+                    customView = view
+                    customViewCallback = callback
+                    // Enter immersive fullscreen
+                    activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    activity?.window?.decorView?.systemUiVisibility = (
+                        View.SYSTEM_UI_FLAG_FULLSCREEN or
+                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        )
+                    // Attach the custom view on top of WebView
+                    view?.let {
+                        rootContainer.addView(
+                            it,
+                            FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                        )
+                        this@apply.visibility = View.GONE
+                    }
+                }
+
+                override fun onHideCustomView() {
+                    activity?.window?.decorView?.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+                    customView?.let {
+                        rootContainer.removeView(it)
+                    }
+                    customViewCallback?.onCustomViewHidden()
+                    customView = null
+                    customViewCallback = null
+                    this@apply.visibility = View.VISIBLE
+                }
+            }
+        }
+    }
+
+    AndroidView(
+        factory = {
+            // Ensure WebView is attached inside the root container
+            if (webView.parent == null) {
+                rootContainer.addView(
+                    webView,
+                    FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                )
+            }
+            rootContainer
+        },
+        update = {
+            webView.loadDataWithBaseURL("https://www.youtube-nocookie.com", html, "text/html", "utf-8", null)
+        },
+        modifier = modifier
+    )
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                webView.stopLoading()
+                webView.loadUrl("about:blank")
+                webView.clearHistory()
+                webView.onPause()
+                webView.pauseTimers()
+                webView.destroy()
+            } catch (_: Throwable) {
+                // ignore cleanup exceptions
+            }
+        }
+    }
+}
+
+private fun toEmbedUrl(url: String): String {
+    val cleaned = url.substringBefore('&').substringBefore('?')
+    val videoId = when {
+        cleaned.contains("youtu.be/") -> cleaned.substringAfter("youtu.be/")
+        cleaned.contains("watch?v=") -> cleaned.substringAfter("watch?v=")
+        else -> cleaned
+    }
+    return "https://www.youtube-nocookie.com/embed/$videoId?rel=0&modestbranding=1&playsinline=1&autoplay=1"
 }
 
 @Composable
@@ -560,7 +848,26 @@ fun getLearningPathData(categoryId: String): LearningPath {
                     title = "Financial Basics",
                     description = "Understanding money, income, and expenses",
                     duration = "30 min",
-                    lessons = listOf(),
+                    lessons = listOf(
+                        Lesson(
+                            id = "video_intro_finance",
+                            title = "Intro to Personal Finance",
+                            content = "https://youtu.be/_xKNiIvygkM?si=EkC9FQy4hbpzank_",
+                            type = LessonType.VIDEO
+                        ),
+                        Lesson(
+                            id = "video_budgeting",
+                            title = "Budgeting Basics",
+                            content = "https://youtu.be/hxg_rbaf0pg?si=R6-hWvcs7kmCfbHQ",
+                            type = LessonType.VIDEO
+                        ),
+                        Lesson(
+                            id = "video_saving",
+                            title = "Saving Strategies",
+                            content = "https://youtu.be/KUpYBR7d6is?si=MYf7n0dJWJIEdKKs",
+                            type = LessonType.VIDEO
+                        )
+                    ),
                     status = ModuleStatus.COMPLETED
                 ),
                 LearningModule(
