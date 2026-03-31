@@ -7,19 +7,13 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.flow.first
 
-/**
- * API Service for account-related operations, aligned with API documentation.
- */
+
 class AccountsApiService(
     private val client: HttpClient,
     private val sessionStorage: SessionStorage,
-    // FIX: Base URL should probably not include /api here if you add it in every
     private val baseUrl: String = "https://gkash.onrender.com/api"
 ) {
-    /**
-     * Corresponds to: GET /accounts
-     * Fetches all accounts for the authenticated user (identified by auth token).
-     */
+
     suspend fun getUserAccounts(): Result<List<Account>> {
         return try {
             val response = client.get("$baseUrl/accounts") {
