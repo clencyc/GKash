@@ -393,9 +393,44 @@ class AuthViewModel(
             initialValue = UiAuthState.Unknown
         )
 
+    private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
+    val loginState: StateFlow<LoginState> = _loginState.asStateFlow()
+
+    fun login(email: String, pin: String) {
+        viewModelScope.launch {
+            _loginState.value = LoginState.Loading
+            try {
+                val result = authRepository.login(email, pin)
+                if (result.isSuccess) {
+                    val response = result.getOrNull()
+                    if (response?.success == true && response.token != null) {
+                        _loginState.value = LoginState.Success
+                    } else {
+                        _loginState.value = LoginState.Error(response?.message ?: "Invalid credentials")
+                    }
+                } else {
+                    _loginState.value = LoginState.Error(result.exceptionOrNull()?.message ?: "Login failed")
+                }
+            } catch (e: Exception) {
+                _loginState.value = LoginState.Error(e.message ?: "An unexpected error occurred")
+            }
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             authRepository.logout()
         }
     }
+
+    fun resetLoginState() {
+        _loginState.value = LoginState.Idle
+    }
+}
+
+sealed class LoginState {
+    object Idle : LoginState()
+    object Loading : LoginState()
+    object Success : LoginState()
+    data class Error(val message: String) : LoginState()
 }

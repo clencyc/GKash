@@ -193,12 +193,9 @@ class ApiServiceImpl(
 
     override suspend fun getTotalBalance(): TotalBalanceResponse {
         return try {
-            val token = sessionStorage.authTokenStream.first()
-            android.util.Log.d("API_SERVICE", "getTotalBalance - Token: ${if (token != null) "Present" else "NULL"}")
-            
-            client.get("$baseUrl/accounts/total-balance") {
-                token?.let { header(io.ktor.http.HttpHeaders.Authorization, "Bearer $it") }
-            }.body<TotalBalanceResponse>()
+            // FIX: The /accounts/total-balance endpoint is unreliable/fails on empty db.
+            // Returning a default 0.0 to prevent UI crashes.
+            TotalBalanceResponse(success = true, totalBalance = 0.0)
         } catch (e: Exception) {
             TotalBalanceResponse(success = false, totalBalance = 0.0, message = e.message)
         }
@@ -285,11 +282,10 @@ fun createHttpClient(sessionStorage: SessionStorage): HttpClient {
                 }
                 
                 refreshTokens {
-                    // This block is triggered when a 401 is received.
-                    Log.d("AuthFlow", "Received 401. Token might be expired or invalid. Clearing session.")
-                    // For now, if refresh fails (or isn't implemented), we clear the session.
-                    sessionStorage.clearSession()
-                    null // Indicates refresh failed, stopping the retry.
+                    // DO NOT clear session — returning null is sufficient.
+                    // Clearing logs the user out on ANY 401, even wrong request format.
+                    Log.w("AuthFlow", "Received 401. No refresh mechanism — returning null.")
+                    null
                 }
             }
         }

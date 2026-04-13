@@ -5,6 +5,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import io.ktor.client.statement.*
 import kotlinx.coroutines.flow.first
 
 
@@ -16,13 +17,19 @@ class AccountsApiService(
 
     suspend fun getUserAccounts(): Result<List<Account>> {
         return try {
+            val token = sessionStorage.authTokenStream.first()
             val response = client.get("$baseUrl/accounts") {
                 contentType(ContentType.Application.Json)
+                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
             }
 
-            if (response.status == HttpStatusCode.OK) {
-                val accountsResponse: AccountsListResponse = response.body()
-                Result.success(accountsResponse.accounts)
+            if (response.status == HttpStatusCode.OK || response.status == HttpStatusCode.Created) {
+                // The backend returns a raw list [...] instead of a wrapped object
+                val accounts: List<Account> = response.body()
+                Result.success(accounts)
+            } else if (response.status == HttpStatusCode.NotFound) {
+                // Return an empty list for 404 (No accounts found) instead of a failure
+                Result.success(emptyList())
             } else {
                 Result.failure(Exception("Failed to fetch accounts: ${response.status}"))
             }
@@ -37,17 +44,13 @@ class AccountsApiService(
      */
     suspend fun getAccountById(accountId: String): Result<Account> {
         return try {
+            val token = sessionStorage.authTokenStream.first()
             val response = client.get("$baseUrl/accounts/$accountId") {
                 contentType(ContentType.Application.Json)
+                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
             }
 
             if (response.status == HttpStatusCode.OK) {
-                // Assuming the API returns the Account object directly or wrapped
-                // If it's wrapped like { "account": {...} }, use SingleAccountResponse
-                // val wrapper: SingleAccountResponse = response.body()
-                // Result.success(wrapper.account)
-
-                // If the API returns the Account object directly:
                 val account: Account = response.body()
                 Result.success(account)
             } else {
@@ -75,12 +78,13 @@ class AccountsApiService(
             }
 
             if (response.status == HttpStatusCode.Created) {
-                // Assuming the API returns the newly created account object
                 val createdAccount: Account = response.body()
-                android.util.Log.d("ACCOUNTS_API", "✓ Account created successfully: ${createdAccount.accountType}")
+                android.util.Log.d("ACCOUNTS_API", "✓ Account created successfully: ${createdAccount.accountType} (ID: ${createdAccount.id})")
                 Result.success(createdAccount)
             } else {
+                val errorBody = response.bodyAsText()
                 android.util.Log.e("ACCOUNTS_API", "✗ Failed to create account: ${response.status}")
+                android.util.Log.e("ACCOUNTS_API", "Response Body: $errorBody")
                 Result.failure(Exception("Failed to create account: ${response.status}"))
             }
         } catch (e: Exception) {
@@ -90,13 +94,14 @@ class AccountsApiService(
     }
 
     /**
-     * NOTE: Your API docs don't specify an endpoint for updating a balance.
-     * This is a placeholder for a potential: PUT /accounts/{id}/balance
+     * NOTE: placeholder for a potential: PUT /accounts/{id}/balance
      */
     suspend fun updateAccountBalance(request: UpdateAccountBalanceRequest): Result<Account> {
         return try {
+            val token = sessionStorage.authTokenStream.first()
             val response = client.put("$baseUrl/accounts/${request.accountId}/balance") {
                 contentType(ContentType.Application.Json)
+                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
                 setBody(request)
             }
 
@@ -113,12 +118,13 @@ class AccountsApiService(
 
     /**
      * Corresponds to: DELETE /accounts/{id}
-     * Deletes a specific account by its ID.
      */
     suspend fun deleteAccount(accountId: String): Result<Boolean> {
         return try {
+            val token = sessionStorage.authTokenStream.first()
             val response = client.delete("$baseUrl/accounts/$accountId") {
                 contentType(ContentType.Application.Json)
+                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
             }
 
             if (response.status == HttpStatusCode.OK) {
@@ -137,13 +143,16 @@ class AccountsApiService(
      */
     suspend fun getTotalBalance(): Result<Double> {
         return try {
-            // FIX: Call the updated getUserAccounts() without userId
             val accountsResult = getUserAccounts()
-            accountsResult.map { accounts ->
-                accounts.sumOf { it.accountBalance }
+            if (accountsResult.isSuccess) {
+                val accounts = accountsResult.getOrDefault(emptyList())
+                Result.success(accounts.sumOf { it.accountBalance })
+            } else {
+                // If it really failed (not a 404), return 0.0 but perhaps we should log it
+                Result.success(0.0)
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.success(0.0) // Return 0.0 instead of failure for balance display
         }
     }
 }

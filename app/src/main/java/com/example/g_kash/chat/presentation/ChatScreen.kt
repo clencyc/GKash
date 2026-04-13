@@ -137,7 +137,7 @@ fun ChatHeader(
             ) {
                 Icon(
                     imageVector = Icons.Default.Psychology,
-                    contentDescription = "AI Assistant",
+                    contentDescription = "G-Ulizie",
                     tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(24.dp)
                 )
@@ -147,7 +147,7 @@ fun ChatHeader(
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Financial AI Assistant",
+                    text = "G-Ulizie",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -229,7 +229,7 @@ fun WelcomeMessage() {
         ) {
             Icon(
                 imageVector = Icons.Default.Psychology,
-                contentDescription = "AI Assistant",
+                contentDescription = "G-Ulizie",
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary
             )

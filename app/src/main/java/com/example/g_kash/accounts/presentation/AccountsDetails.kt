@@ -22,7 +22,8 @@ fun AccountDetailsScreen(
     // It's better practice to let the screen get its own ViewModel
     viewModel: AccountsViewModel = koinViewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateToTransactions: () -> Unit
+    onNavigateToTransactions: () -> Unit,
+    onNavigateToDeposit: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val account = uiState.accounts.find { it.id == accountId }
@@ -159,7 +160,24 @@ fun AccountDetailsScreen(
                     InfoRow(label = "Last Updated", value = account.updatedAt)
                 }
 
-                Spacer(modifier = Modifier.weight(1f)) // Pushes button to bottom
+                Spacer(modifier = Modifier.weight(1f)) // Pushes buttons to bottom
+
+                // Deposit button
+                Button(
+                    onClick = onNavigateToDeposit,
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF1493), // PinkPremium
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(Icons.Default.AddCard, null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Invest / Deposit", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // View Transactions Button
                 Button(

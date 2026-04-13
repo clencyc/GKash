@@ -147,9 +147,8 @@ class InvestmentAccountCreationViewModel(
         viewModelScope.launch {
             try {
                 val request = CreateAccountRequest(
-                    accountType = state.selectedAccountType.name.lowercase()
+                    accountType = state.selectedAccountType?.displayName?.lowercase() ?: "balanced fund"
                 )
-
                 accountsRepository.createAccount(request).collect { result ->
                     result.fold(
                         onSuccess = { account ->

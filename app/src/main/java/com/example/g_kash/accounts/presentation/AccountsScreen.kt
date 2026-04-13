@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.g_kash.accounts.data.Account
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import org.koin.androidx.compose.koinViewModel
 import java.text.NumberFormat
 import java.util.*
@@ -27,27 +29,33 @@ import java.util.*
 // --- FIX 1: DEFINE THE MISSING AccountType ENUM ---
 // This enum holds display information and the raw string value the API expects.
 enum class AccountType(val displayName: String, val apiValue: String) {
-    BALANCED_FUND("Balanced Fund", "balanced_fund"),
-    FIXED_INCOME_FUND("Fixed Income Fund", "fixed_income_fund"),
-    MONEY_MARKET_FUND("Money Market Fund", "money_market_fund"),
-    STOCK_MARKET("Stock Market", "stock_market")
+    BALANCED_FUND("Balanced Fund", "balanced fund"),
+    FIXED_INCOME_FUND("Fixed Income Fund", "bond fund"),
+    MONEY_MARKET_FUND("Money Market Fund", "money market fund"),
+    STOCK_MARKET("Stock Market", "equity fund")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsScreen(
-    // It's better practice to let the screen get its own ViewModel
     viewModel: AccountsViewModel = koinViewModel(),
     onNavigateToTransactions: (String) -> Unit,
+    onNavigateToDeposit: (String) -> Unit, // NEW
     onNavigateBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
 
+    // Auto-refresh when screen appears
+    LaunchedEffect(Unit) {
+        viewModel.loadUserAccounts()
+        viewModel.loadTotalBalance()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Accounts") },
+                title = { Text("My Accounts", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
@@ -72,12 +80,15 @@ fun AccountsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Total Balance Card
             WalletBalanceCard(
                 balance = uiState.totalBalance,
-                isLoading = uiState.isLoading
+                isLoading = uiState.isLoading,
+                onInvestClick = { onNavigateToDeposit("") } // General invest
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -147,8 +158,10 @@ fun AccountsScreen(
                             AccountCard(
                                 account = account,
                                 onClick = {
-                                    // --- FIX 2: USE 'id' INSTEAD OF 'accountId' ---
                                     onNavigateToTransactions(account.id)
+                                },
+                                onInvestClick = {
+                                    onNavigateToDeposit(account.id)
                                 }
                             )
                         }
@@ -173,7 +186,11 @@ fun AccountsScreen(
 }
 
 @Composable
-fun AccountCard(account: Account, onClick: () -> Unit) {
+fun AccountCard(
+    account: Account, 
+    onClick: () -> Unit,
+    onInvestClick: () -> Unit // NEW
+) {
     // This helper function converts the raw string from the API back to our enum
     val accountTypeEnum = AccountType.values().find { it.apiValue == account.accountType } ?: AccountType.BALANCED_FUND
 
@@ -181,43 +198,80 @@ fun AccountCard(account: Account, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = getAccountTypeColor(accountTypeEnum).copy(alpha = 0.1f),
-                modifier = Modifier.size(48.dp)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        imageVector = getAccountTypeIcon(accountTypeEnum),
-                        contentDescription = null,
-                        tint = getAccountTypeColor(accountTypeEnum)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = getAccountTypeColor(accountTypeEnum).copy(alpha = 0.1f),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            imageVector = getAccountTypeIcon(accountTypeEnum),
+                            contentDescription = null,
+                            tint = getAccountTypeColor(accountTypeEnum),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = formatAccountType(accountTypeEnum),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Active Account",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 }
+                Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = formatAccountType(accountTypeEnum),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = formatCurrency(account.accountBalance),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Column {
+                    Text(
+                        text = "Current Balance",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = formatCurrency(account.accountBalance),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                
+                Button(
+                    onClick = onInvestClick,
+                    modifier = Modifier.height(36.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Invest", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                }
             }
-            Icon(Icons.Default.KeyboardArrowRight, contentDescription = "View Details", tint = MaterialTheme.colorScheme.outline)
         }
     }
 }

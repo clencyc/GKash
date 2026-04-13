@@ -3,9 +3,7 @@ package com.example.g_kash.wallet.data
 import com.example.g_kash.accounts.data.Account
 import com.example.g_kash.authentication.data.ApiService
 import com.example.g_kash.transactions.data.Transaction
-import com.example.g_kash.transactions.data.TransactionStatus
 import com.example.g_kash.transactions.domain.TransactionRepository
-import kotlinx.coroutines.flow.Flow
 
 // Interface
 interface WalletRepository {
@@ -17,7 +15,8 @@ interface WalletRepository {
 // Implementation
 class WalletRepositoryImpl(
     private val apiService: ApiService,
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val balanceRepository: BalanceRepository
 ) : WalletRepository {
     override suspend fun getUserAccounts(): Result<List<Account>> {
         // This might delegate to an existing repository or make its own API call
@@ -38,6 +37,7 @@ class WalletRepositoryImpl(
         return try {
             val response = apiService.getTotalBalance()
             if (response.success) {
+                balanceRepository.setBalance(response.totalBalance)
                 Result.success(response.totalBalance)
             } else {
                 Result.failure(Exception(response.message ?: "Failed to load total balance"))

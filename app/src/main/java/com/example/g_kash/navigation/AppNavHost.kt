@@ -1,24 +1,20 @@
 package com.example.g_kash.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.navigation
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+
 import com.example.g_kash.accounts.presentation.AccountDetailsScreen
 import com.example.g_kash.accounts.presentation.AccountsScreen
 import com.example.g_kash.authentication.presentation.*
@@ -36,9 +32,16 @@ import com.example.g_kash.goals.presentation.GoalsScreen
 import com.example.g_kash.groups.presentation.GroupsScreen
 import com.example.g_kash.investment.presentation.InvestmentSimulatorScreen
 import com.example.g_kash.investment.presentation.InvestmentAccountCreationScreen
+import com.example.g_kash.investment.presentation.InvestmentScreen
+import com.example.g_kash.investment.presentation.ReceiptScreen
 import com.example.g_kash.leaderboard.presentation.LeaderboardScreen
 import com.example.g_kash.points.presentation.PointsStoreScreen
 import com.example.g_kash.points.presentation.EnhancedProfileScreen
+import com.example.g_kash.transactions.presentation.TransactionsScreen
+import com.example.g_kash.payment.presentation.DepositScreen
+import com.example.g_kash.payment.presentation.PaymentReceiptScreen
+import com.example.g_kash.payment.data.PaymentReceipt
+import com.example.g_kash.budget.presentation.BudgetSimulatorScreen
 import org.koin.androidx.compose.koinViewModel
 
 // Main navigation setup for the entire application
@@ -106,20 +109,34 @@ fun AppNavigation() {
                 
                 // Login screen - for existing users
                 composable("auth/login") {
-                    ImprovedLoginEmailPinScreen(
-                        onLoginSuccess = { email, pin ->
-                            // TODO: Call login API with email+pin
+                    val loginState by authViewModel.loginState.collectAsState()
+
+                    // React to login success
+                    LaunchedEffect(loginState) {
+                        if (loginState is LoginState.Success) {
                             navController.navigate(Graph.MAIN) {
                                 popUpTo(Graph.AUTH) { inclusive = true }
                             }
+                            authViewModel.resetLoginState()
+                        }
+                    }
+
+                    ImprovedLoginEmailPinScreen(
+                        isLoading = loginState is LoginState.Loading,
+                        showError = (loginState as? LoginState.Error)?.message,
+                        onLoginSuccess = { email, pin ->
+                            authViewModel.login(email, pin)
                         },
                         onNavigateBack = {
+                            authViewModel.resetLoginState()
                             navController.navigate("auth/onboarding") {
                                 popUpTo("auth/login") { inclusive = true }
                             }
                         }
                     )
                 }
+
+
                 
                 // KYC Flow (Registration Process)
                 composable("auth/kyc") {
@@ -205,8 +222,9 @@ fun AppNavigation() {
                     WalletScreen(
                         onNavigateToAccounts = { navController.navigate("accounts") },
                         onNavigateToAccountDetails = { accountId -> navController.navigate("account_details/$accountId") },
-                        onNavigateToTransactionHistory = {},
-                        onNavigateToInvestment = { navController.navigate("investment_account_creation") },
+                        onNavigateToTransactionHistory = { navController.navigate("main/transactions") },
+                        onNavigateToInvestment = { navController.navigate(Destination.Deposit.createRoute("")) },
+                        onNavigateToBudgetSimulator = { navController.navigate(Destination.BudgetSimulator.route) },
                         userId = ""
                     )
                 }
@@ -239,6 +257,12 @@ fun AppNavigation() {
                         }
                     )
                 }
+
+                composable("main/transactions") {
+                    TransactionsScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
                 
                 // Additional screens - accessible but not in main bottom bar
                 composable("main/goals") {
@@ -258,12 +282,24 @@ fun AppNavigation() {
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
+                composable(Destination.BudgetSimulator.route) {
+                    BudgetSimulatorScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onInvestClick = { amount ->
+                            // Agentic Bridge: Direct the user to the investment flow with pre-filled context
+                            navController.navigate(Destination.Deposit.createRoute(""))
+                        }
+                    )
+                }
 
                 // Detail Screens (without bottom bar)
                 composable("accounts") {
                     AccountsScreen(
                         onNavigateToTransactions = { accountId ->
                             navController.navigate("account_transactions/$accountId")
+                        },
+                        onNavigateToDeposit = { accountId ->
+                            navController.navigate(Destination.Deposit.createRoute(accountId))
                         },
                         onNavigateBack = { navController.popBackStack() }
                     )
@@ -278,6 +314,9 @@ fun AppNavigation() {
                         onNavigateBack = { navController.popBackStack() },
                         onNavigateToTransactions = {
                             navController.navigate("account_transactions/$accountId")
+                        },
+                        onNavigateToDeposit = {
+                            navController.navigate(Destination.Deposit.createRoute(accountId))
                         }
                     )
                 }
@@ -314,6 +353,119 @@ fun AppNavigation() {
                                 popUpTo("investment_account_creation") { inclusive = true }
                             }
                         }
+                    )
+                }
+
+                composable("investment") {
+                    DepositScreen(
+                        preselectedAccountId = "",
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToReceipt = { receipt ->
+                            navController.navigate(Destination.PaymentReceipt.createRoute(receipt)) {
+                                popUpTo("main/home") { inclusive = false }
+                            }
+                        }
+                    )
+                }
+
+                composable(
+                    route = "investment_receipt/{reference}/{amount}/{timestamp}/{type}/{status}",
+                    arguments = listOf(
+                        navArgument("reference") { type = NavType.StringType },
+                        navArgument("amount") { type = NavType.StringType },
+                        navArgument("timestamp") { type = NavType.StringType },
+                        navArgument("type") { type = NavType.StringType },
+                        navArgument("status") { type = NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val reference = backStackEntry.arguments?.getString("reference") ?: ""
+                    val amount = backStackEntry.arguments?.getString("amount")?.toDoubleOrNull() ?: 0.0
+                    val timestamp = backStackEntry.arguments?.getString("timestamp") ?: ""
+                    val type = backStackEntry.arguments?.getString("type") ?: "GKash Savings"
+                    val status = backStackEntry.arguments?.getString("status") ?: "Completed"
+
+                    ReceiptScreen(
+                        receipt = com.example.g_kash.investment.data.InvestmentReceipt(
+                            transactionReference = reference,
+                            amount = amount,
+                            investmentType = type,
+                            timestamp = timestamp,
+                            status = status
+                        ),
+                        onDone = {
+                            navController.navigate("main/home") {
+                                popUpTo("main/home") { inclusive = true }
+                            }
+                        },
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                // Payment / Deposit screens
+                composable(
+                    route = Destination.Deposit.route,
+                    arguments = listOf(
+                        navArgument("accountId") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = ""
+                        }
+                    )
+                ) { backStackEntry ->
+                    val accountId = backStackEntry.arguments?.getString("accountId") ?: ""
+                    DepositScreen(
+                        preselectedAccountId = accountId,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToReceipt = { receipt ->
+                            navController.navigate(
+                                "payment/receipt/" +
+                                    "${Uri.encode(receipt.transactionReference)}/" +
+                                    "${Uri.encode(receipt.amount.toString())}/" +
+                                    "${Uri.encode(receipt.accountType)}/" +
+                                    "${Uri.encode(receipt.accountId)}/" +
+                                    "${Uri.encode(receipt.timestamp)}/" +
+                                    Uri.encode(receipt.phone)
+                            ) {
+                                // Pop the deposit entry from backstack
+                                popUpTo(Destination.Deposit.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+
+                composable(
+                    route = "payment/receipt/{reference}/{amount}/{accountType}/{accountId}/{timestamp}/{phone}",
+                    arguments = listOf(
+                        navArgument("reference")   { type = NavType.StringType },
+                        navArgument("amount")      { type = NavType.StringType },
+                        navArgument("accountType") { type = NavType.StringType },
+                        navArgument("accountId")   { type = NavType.StringType },
+                        navArgument("timestamp")   { type = NavType.StringType },
+                        navArgument("phone")       { type = NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val reference   = Uri.decode(backStackEntry.arguments?.getString("reference")   ?: "")
+                    val amount      = Uri.decode(backStackEntry.arguments?.getString("amount")      ?: "0").toDoubleOrNull() ?: 0.0
+                    val accountType = Uri.decode(backStackEntry.arguments?.getString("accountType") ?: "")
+                    val accountId   = Uri.decode(backStackEntry.arguments?.getString("accountId")   ?: "")
+                    val timestamp   = Uri.decode(backStackEntry.arguments?.getString("timestamp")   ?: "")
+                    val phone       = Uri.decode(backStackEntry.arguments?.getString("phone")       ?: "")
+
+                    PaymentReceiptScreen(
+                        receipt = PaymentReceipt(
+                            transactionReference = reference,
+                            amount = amount,
+                            accountType = accountType,
+                            accountId = accountId,
+                            timestamp = timestamp,
+                            phone = phone
+                        ),
+                        onDone = {
+                            navController.navigate("main/home") {
+                                popUpTo("main/home") { inclusive = true }
+                            }
+                        },
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
             }

@@ -99,7 +99,9 @@ class AccountsViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            val request = CreateAccountRequest(accountType = accountType)
+            val request = CreateAccountRequest(
+                accountType = accountType
+            )
             // FIX 3: Use the correct repository property name 'accountsRepository'
             accountsRepository.createAccount(request)
                 .onEach { result ->

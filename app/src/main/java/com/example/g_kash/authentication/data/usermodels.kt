@@ -89,10 +89,10 @@ data class LoginRequest(
 
 @Serializable
 data class LoginResponse(
-    val success: Boolean = true,
-    val message: String,
-    val token: String,
-    val user: KycUserData
+    val success: Boolean = false,
+    val message: String = "",
+    val token: String? = null,
+    val user: KycUserData? = null
 )
 
 @Serializable

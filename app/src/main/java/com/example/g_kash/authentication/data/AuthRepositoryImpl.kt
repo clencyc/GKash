@@ -57,7 +57,7 @@ class AuthRepositoryImpl(
         return try {
             val request = LoginRequest(email, pin)
             val response = apiService.login(request)
-            if (response.success) {
+            if (response.success && response.token != null) {
                 sessionStorage.saveSession(
                     token = response.token,
                     userId = response.user?.id ?: "",

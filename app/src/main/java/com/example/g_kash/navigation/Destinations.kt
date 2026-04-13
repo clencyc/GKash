@@ -42,6 +42,33 @@ sealed class Destination(val route: String) {
         fun createRoute(investmentId: String) = "invest/details/$investmentId"
     }
     object BuyInvestment : Destination("invest/buy")
+    object BudgetSimulator : Destination("invest/budget_simulator")
+
+    // Payment destinations
+    object Deposit : Destination("payment/deposit?accountId={accountId}") {
+        fun createRoute(accountId: String?) = 
+            if (accountId.isNullOrBlank()) "payment/deposit" 
+            else "payment/deposit?accountId=$accountId"
+    }
+    object PaymentReceipt : Destination("payment/receipt/{reference}/{amount}/{accountType}/{accountId}/{timestamp}/{phone}") {
+        fun createRoute(
+            reference: String,
+            amount: String,
+            accountType: String,
+            accountId: String,
+            timestamp: String,
+            phone: String
+        ) = "payment/receipt/$reference/$amount/$accountType/$accountId/$timestamp/$phone"
+
+        fun createRoute(receipt: com.example.g_kash.payment.data.PaymentReceipt) = createRoute(
+            reference = receipt.transactionReference,
+            amount = receipt.amount.toString(),
+            accountType = receipt.accountType,
+            accountId = receipt.accountId,
+            timestamp = receipt.timestamp,
+            phone = receipt.phone
+        )
+    }
 
 //    // Learning destinations
 //    object Courses : Destination("learn/courses")

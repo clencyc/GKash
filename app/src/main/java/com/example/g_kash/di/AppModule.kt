@@ -36,13 +36,14 @@ import com.example.g_kash.chat.data.ChatBotApiService
 import com.example.g_kash.chat.data.ChatBotRepositoryImpl
 import com.example.g_kash.chat.domain.ChatBotRepository
 import com.example.g_kash.profile.presentation.ProfileViewModel
-import com.example.g_kash.wallet.data.WalletRepository
-import com.example.g_kash.wallet.data.WalletRepositoryImpl
-import com.example.g_kash.wallet.presentation.WalletViewModel
+import com.example.g_kash.wallet.data.BalanceRepository
 import com.example.g_kash.points.domain.*
 import com.example.g_kash.points.data.MockPointsRepository
 import com.example.g_kash.points.presentation.PointsViewModel
 import com.example.g_kash.investment.presentation.InvestmentAccountCreationViewModel
+import com.example.g_kash.investment.data.InvestmentRepository
+import com.example.g_kash.investment.data.KtorInvestmentRepository
+import com.example.g_kash.investment.presentation.InvestmentViewModel
 import com.google.firebase.analytics.FirebaseAnalytics
 import io.ktor.client.engine.android.*
 import io.ktor.client.plugins.*
@@ -55,6 +56,10 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import com.example.g_kash.authentication.data.ApiService
 import com.example.g_kash.authentication.data.ApiServiceImpl
+import com.example.g_kash.payment.data.PaymentApiService
+import com.example.g_kash.payment.data.PaymentRepository
+import com.example.g_kash.payment.data.PaymentRepositoryImpl
+import com.example.g_kash.payment.presentation.PaymentViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
@@ -83,9 +88,9 @@ val networkModule = module {
             }
 
             install(HttpTimeout) {
-                requestTimeoutMillis = 30000 // 30 seconds max for requests
-                connectTimeoutMillis = 15000 // 15 seconds to establish connection
-                socketTimeoutMillis = 30000  // 30 seconds for socket operations
+                requestTimeoutMillis = 60000 // 60 seconds max for requests (Render cold starts)
+                connectTimeoutMillis = 20000 // 20 seconds to establish connection
+                socketTimeoutMillis = 60000  // 60 seconds for socket operations
             }
 
             install(Logging) {
@@ -102,6 +107,7 @@ val networkModule = module {
                     prettyPrint = true
                     isLenient = true
                     ignoreUnknownKeys = true
+                    encodeDefaults = true
                 })
             }
 
@@ -126,13 +132,11 @@ val networkModule = module {
                     }
 
                     refreshTokens {
-                        Log.w("KtorAuth", "Token refresh triggered.")
-                        try {
-                            sessionStorage.clearSession()
-                        } catch (e: Exception) {
-                            Log.e("KtorAuth", "Error clearing session", e)
-                        }
-                        null // No refresh mechanism
+                        // DO NOT clear session here — a 401 from a data-format error
+                        // (wrong body, missing account_id, etc.) would otherwise wipe
+                        // the user's stored token and force a surprise logout.
+                        Log.w("KtorAuth", "Token refresh triggered (401). No refresh mechanism — returning null.")
+                        null
                     }
                 }
             }
@@ -148,6 +152,7 @@ val networkModule = module {
     single<AlphaVantageApiService> { AlphaVantageApiServiceImpl(get(named("alpha_vantage"))) }
     single { AccountsApiService(get(), get()) }
     single { ChatBotApiService(get()) }
+    single { PaymentApiService(get(), get()) }
     single<com.example.g_kash.otp.domain.OtpApiService> { com.example.g_kash.otp.data.OtpApiServiceImpl(get()) }
     factory { com.example.g_kash.otp.domain.SendOtpUseCase(get()) }
     factory { com.example.g_kash.otp.domain.VerifyOtpUseCase(get()) }
@@ -172,7 +177,9 @@ val appModule = module {
     single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
     single<AccountsRepository> { AccountsRepositoryImpl(get()) }
     single<TransactionRepository> { TransactionRepositoryImpl(get()) }
-    single<WalletRepository> { WalletRepositoryImpl(get(), get()) }
+    single<BalanceRepository> { BalanceRepository() }
+    single<InvestmentRepository> { KtorInvestmentRepository(get(), get()) }
+    single<PaymentRepository> { PaymentRepositoryImpl(get()) }
     single<FinancialLearningRepository> { FinancialLearningRepositoryImpl(get()) }
     single<ChatBotRepository> { ChatBotRepositoryImpl(get(), get()) }
     single<PointsRepository> { MockPointsRepository() }
@@ -198,9 +205,10 @@ val appModule = module {
     viewModel { AccountsViewModel(get()) }
     viewModel { FinancialLearningViewModel(get()) }
     viewModel { InvestmentAccountCreationViewModel(get()) }
+    viewModel { InvestmentViewModel(get(), get(), get(), get()) }
     viewModel { ChatViewModel(get()) }
     viewModel { ProfileViewModel(get()) }
-    viewModel { TransactionsViewModel(get()) }
-    viewModel { (userId: String) -> WalletViewModel(userId, get()) }
+    viewModel { TransactionsViewModel(get(), get()) }
     viewModel { PointsViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { (accountId: String) -> PaymentViewModel(get(), get(), accountId) }
 }

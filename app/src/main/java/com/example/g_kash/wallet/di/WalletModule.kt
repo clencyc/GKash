@@ -1,6 +1,7 @@
 package com.example.g_kash.wallet.di
 
 import com.example.g_kash.data.SessionStorage
+import com.example.g_kash.transactions.domain.TransactionRepository
 import com.example.g_kash.wallet.data.WalletRepository
 import com.example.g_kash.wallet.data.WalletRepositoryImpl
 import com.example.g_kash.wallet.presentation.WalletViewModel
@@ -13,7 +14,8 @@ val walletModule = module {
     single<WalletRepository> {
         WalletRepositoryImpl(
             get(), // HttpClient
-            get()  // SessionStorage
+            get(),  // TransactionRepository
+            get()   // BalanceRepository
         )
     }
 
@@ -24,7 +26,9 @@ val walletModule = module {
 
         WalletViewModel(
             userId = userId,
-            walletRepository = get()
+            walletRepository = get(),
+            balanceRepository = get(),
+            transactionRepository = get()
         )
     }
 }

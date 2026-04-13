@@ -3,19 +3,22 @@ package com.example.g_kash.accounts.data
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-// Represents the structure of a single account object from your API
+// Represents the structure of a single account object from your API.
+// The live API returns:  _id, account_type, account_balance, createdAt, updatedAt
 @Serializable
 data class Account(
-    val id: String,
+    // The API returns "_id" for createAccount but "id" for list – @SerialName handles the most common one,
+    // the HttpClient is configured with ignoreUnknownKeys so missing fields fall back to defaults.
+    @SerialName("_id")
+    val id: String = "",
     @SerialName("account_type")
-    val accountType: String,
-    @SerialName("balance")
-    val accountBalance: Double,
-    @SerialName("created_at")
-    val createdAt: String,
-
-    @SerialName("updated_at")
-    val updatedAt: String
+    val accountType: String = "",
+    @SerialName("account_balance")
+    val accountBalance: Double = 0.0,
+    @SerialName("createdAt")
+    val createdAt: String = "",
+    @SerialName("updatedAt")
+    val updatedAt: String = ""
 )
 
 @Serializable

@@ -60,6 +60,12 @@ object AnalyticsHelper {
         const val ERROR_OCCURRED = "error_occurred"
         const val RESEND_OTP = "resend_otp"
         const val BACK_NAVIGATION = "back_navigation"
+
+        // Investment Events
+        const val INVESTMENT_INITIATED = "investment_initiated"
+        const val STK_PUSH_SENT = "stk_push_sent"
+        const val INVESTMENT_SUCCESS = "investment_success"
+        const val INVESTMENT_FAILED = "investment_failed"
     }
 
     object UserProperties {

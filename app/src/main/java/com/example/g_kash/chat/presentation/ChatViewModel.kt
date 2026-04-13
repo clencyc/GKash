@@ -153,7 +153,7 @@ class ChatViewModel(
                 "Start investing with these steps: 1) Pay off high-interest debt first, 2) Build your emergency fund, 3) Consider low-cost index funds or ETFs, 4) Start with what you can afford, even $25/month helps, 5) Use tax-advantaged accounts like retirement plans if available."
             }
             message.contains("hello") || message.contains("hi") -> {
-                "Hello! I'm your personal finance AI assistant. I'm currently running in offline mode, but I can still help with basic financial questions. What would you like to know?"
+                "Hello! I'm G-Ulizie, your personal finance assistant. I'm currently running in offline mode, but I can still help with basic financial questions. What would you like to know?"
             }
             message.contains("thank") -> {
                 "You're welcome! I'm here to help with your financial questions. Please note I'm currently in offline mode with limited responses."
