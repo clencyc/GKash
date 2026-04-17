@@ -1,6 +1,7 @@
 package com.example.g_kash.leaderboard.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -56,7 +57,7 @@ fun LeaderboardScreen() {
             Icon(
                 imageVector = Icons.Default.EmojiEvents,
                 contentDescription = "Trophy",
-                tint = Color(0xFFFFD700),
+                tint = if (isSystemInDarkTheme()) Color(0xFFFFD54F) else Color(0xFFFFD700),
                 modifier = Modifier.size(32.dp)
             )
         }
@@ -105,14 +106,19 @@ fun TopThreePodium(topThree: List<LeaderboardEntry>) {
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.Bottom
         ) {
+            val isDark = isSystemInDarkTheme()
+            val gold = if (isDark) Color(0xFFFFD54F) else Color(0xFFFFD700)
+            val silver = if (isDark) Color(0xFFE0E0E0) else Color(0xFFC0C0C0)
+            val bronze = if (isDark) Color(0xFFA1887F) else Color(0xFFCD7F32)
+
             if (topThree.size > 1) {
-                PodiumPosition(topThree[1], 80.dp, Color(0xFFC0C0C0)) // Silver
+                PodiumPosition(topThree[1], 80.dp, silver) // Silver
             }
             if (topThree.isNotEmpty()) {
-                PodiumPosition(topThree[0], 100.dp, Color(0xFFFFD700)) // Gold
+                PodiumPosition(topThree[0], 100.dp, gold) // Gold
             }
             if (topThree.size > 2) {
-                PodiumPosition(topThree[2], 60.dp, Color(0xFFCD7F32)) // Bronze
+                PodiumPosition(topThree[2], 60.dp, bronze) // Bronze
             }
         }
     }
@@ -277,7 +283,7 @@ fun LeaderboardItem(
             Icon(
                 imageVector = Icons.Default.TrendingUp,
                 contentDescription = "Growing",
-                tint = Color(0xFF4CAF50),
+                tint = if (isSystemInDarkTheme()) Color(0xFF81C784) else Color(0xFF4CAF50),
                 modifier = Modifier.size(20.dp)
             )
         }

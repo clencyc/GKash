@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,15 +16,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.g_kash.ui.theme.PinkPrimary
-import com.example.g_kash.ui.theme.GoldSecondary
+// Theme colors are now used directly via MaterialTheme.colorScheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +34,13 @@ fun InvestmentSimulatorScreen() {
     var selectedPeriod by remember { mutableStateOf(12) }
     var selectedRisk by remember { mutableStateOf("Medium") }
     
+    // Budget Simulator State
+    var budgetAllowance by remember { mutableStateOf(50000.0) }
+    var selectedBudgetRule by remember { mutableStateOf(BudgetRule.RULE_50_30_20) }
+    var customNeeds by remember { mutableStateOf(50f) }
+    var customWants by remember { mutableStateOf(30f) }
+    var customSavings by remember { mutableStateOf(20f) }
+
     val estimatedReturn = calculateReturn(selectedAmount, selectedPeriod, selectedRisk)
 
     Column(
@@ -41,7 +50,7 @@ fun InvestmentSimulatorScreen() {
     ) {
         // Header
         Text(
-            text = "Investment Simulator",
+            text = "Financial Simulator",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
@@ -49,8 +58,13 @@ fun InvestmentSimulatorScreen() {
         )
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            contentPadding = PaddingValues(bottom = 100.dp)
         ) {
+            item {
+                SectionHeader("Investment Simulation", Icons.Default.TrendingUp)
+            }
+            
             item {
                 // Investment Amount Selector
                 InvestmentAmountCard(
@@ -98,8 +112,8 @@ fun InvestmentSimulatorScreen() {
                             .weight(1f)
                             .height(48.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = PinkPrimary,
-                            contentColor = Color.White
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -115,11 +129,11 @@ fun InvestmentSimulatorScreen() {
                             .weight(1f)
                             .height(48.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = PinkPrimary
+                            contentColor = MaterialTheme.colorScheme.primary
                         ),
                         border = androidx.compose.foundation.BorderStroke(
                             width = 1.dp,
-                            color = PinkPrimary
+                            color = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -130,6 +144,31 @@ fun InvestmentSimulatorScreen() {
                     }
                 }
             }
+
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            }
+
+            item {
+                SectionHeader("Budget Simulation", Icons.Default.PieChart)
+            }
+
+            item {
+                BudgetSimulatorCard(
+                    allowance = budgetAllowance,
+                    onAllowanceChange = { budgetAllowance = it },
+                    selectedRule = selectedBudgetRule,
+                    onRuleSelected = { selectedBudgetRule = it },
+                    customNeeds = customNeeds,
+                    customWants = customWants,
+                    customSavings = customSavings,
+                    onCustomChange = { n, w, s ->
+                        customNeeds = n
+                        customWants = w
+                        customSavings = s
+                    }
+                )
+            }
             
             item {
                 // Investment Leaderboard
@@ -137,6 +176,20 @@ fun InvestmentSimulatorScreen() {
                 InvestmentLeaderboard()
             }
         }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
     }
 }
 
@@ -185,8 +238,8 @@ fun InvestmentAmountCard(
                             .weight(1f)
                             .height(40.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PinkPrimary.copy(alpha = 0.15f),
-                            selectedLabelColor = PinkPrimary,
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -243,8 +296,8 @@ fun TimePeriodCard(
                             .weight(1f)
                             .height(40.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = GoldSecondary.copy(alpha = 0.15f),
-                            selectedLabelColor = GoldSecondary,
+                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -305,7 +358,7 @@ fun RiskLevelCard(
                             .weight(1f)
                             .height(40.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = riskColors[index].copy(alpha = 0.15f),
+                            selectedContainerColor = riskColors[index].copy(alpha = 0.2f),
                             selectedLabelColor = riskColors[index],
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -327,7 +380,7 @@ fun ResultsCard(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = PinkPrimary.copy(alpha = 0.1f)
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -347,7 +400,7 @@ fun ResultsCard(
                 text = "KES ${String.format("%,.0f", estimatedReturn)}",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
-                color = PinkPrimary
+                color = MaterialTheme.colorScheme.primary
             )
             
             Text(
@@ -431,7 +484,7 @@ fun InvestmentLeaderboard() {
                 Icon(
                     imageVector = Icons.Default.Leaderboard,
                     contentDescription = "Leaderboard",
-                    tint = GoldSecondary,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -567,19 +620,231 @@ fun LeaderboardItem(leader: InvestmentLeader) {
             text = "+${formatAmount(leader.returnAmount - leader.investmentAmount)}",
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF4CAF50),
+            color = if (isSystemInDarkTheme()) Color(0xFF81C784) else Color(0xFF4CAF50),
             textAlign = TextAlign.End,
             modifier = Modifier.weight(1.5f)
         )
     }
 }
 
+@Composable
 private fun getRiskColor(riskLevel: String): Color {
+    val isDark = isSystemInDarkTheme()
     return when (riskLevel) {
-        "Low" -> Color(0xFF4CAF50)
-        "Medium" -> Color(0xFFFF9800)
-        "High" -> Color(0xFFF44336)
-        else -> Color(0xFFFF9800)
+        "Low" -> if (isDark) Color(0xFF81C784) else Color(0xFF4CAF50)
+        "Medium" -> MaterialTheme.colorScheme.tertiary
+        "High" -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.tertiary
+    }
+}
+
+enum class BudgetRule(val label: String, val needs: Float, val wants: Float, val savings: Float) {
+    RULE_50_30_20("50-30-20", 50f, 30f, 20f),
+    RULE_70_20_10("70-20-10", 70f, 20f, 10f),
+    RULE_60_20_20("60-20-20", 60f, 20f, 20f),
+    CUSTOM("Custom", 0f, 0f, 0f)
+}
+
+@Composable
+fun BudgetSimulatorCard(
+    allowance: Double,
+    onAllowanceChange: (Double) -> Unit,
+    selectedRule: BudgetRule,
+    onRuleSelected: (BudgetRule) -> Unit,
+    customNeeds: Float,
+    customWants: Float,
+    customSavings: Float,
+    onCustomChange: (Float, Float, Float) -> Unit
+) {
+    val needsPct = if (selectedRule == BudgetRule.CUSTOM) customNeeds else selectedRule.needs
+    val wantsPct = if (selectedRule == BudgetRule.CUSTOM) customWants else selectedRule.wants
+    val savingsPct = if (selectedRule == BudgetRule.CUSTOM) customSavings else selectedRule.savings
+
+    val needsAmount = allowance * (needsPct / 100)
+    val wantsAmount = allowance * (wantsPct / 100)
+    val savingsAmount = allowance * (savingsPct / 100)
+
+    val currentAllowanceStr = remember(allowance) { if (allowance == 0.0) "" else allowance.toInt().toString() }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                "Monthly Allowance (KES)",
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            OutlinedTextField(
+                value = currentAllowanceStr,
+                onValueChange = { onAllowanceChange(it.toDoubleOrNull() ?: 0.0) },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                prefix = { Text("KES ") },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+            )
+
+            Text(
+                "Budgeting Rule",
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                BudgetRule.values().forEach { rule ->
+                    FilterChip(
+                        selected = selectedRule == rule,
+                        onClick = { onRuleSelected(rule) },
+                        label = { Text(rule.label, fontSize = 12.sp) },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    )
+                }
+            }
+
+            if (selectedRule == BudgetRule.CUSTOM) {
+                CustomBudgetSliders(
+                    needs = customNeeds,
+                    wants = customWants,
+                    savings = customSavings,
+                    onUpdate = onCustomChange
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Visual Breakdown
+            BudgetVisualBreakdown(needsPct, wantsPct, savingsPct)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Details
+            BudgetDetailRow("Needs ($needsPct%)", needsAmount, MaterialTheme.colorScheme.primary)
+            BudgetDetailRow("Wants ($wantsPct%)", wantsAmount, MaterialTheme.colorScheme.tertiary)
+            BudgetDetailRow("Savings ($savingsPct%)", savingsAmount, MaterialTheme.colorScheme.secondary)
+
+            // Future Wealth Projection
+            WealthProjectionCard(monthlySavings = savingsAmount)
+        }
+    }
+}
+
+@Composable
+fun CustomBudgetSliders(
+    needs: Float,
+    wants: Float,
+    savings: Float,
+    onUpdate: (Float, Float, Float) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        SliderWithLabel("Needs", needs) { onUpdate(it, wants, 100f - it - wants) }
+        SliderWithLabel("Wants", wants) { onUpdate(needs, it, 100f - needs - it) }
+        Text(
+            "Savings will be automatically calculated to reach 100%",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+            modifier = Modifier.padding(top = 4.dp)
+        )
+    }
+}
+
+@Composable
+fun SliderWithLabel(label: String, value: Float, onValueChange: (Float) -> Unit) {
+    Column {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, style = MaterialTheme.typography.bodySmall)
+            Text("${value.toInt()}%", fontWeight = FontWeight.Bold)
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = 0f..100f,
+            modifier = Modifier.height(32.dp)
+        )
+    }
+}
+
+@Composable
+fun BudgetVisualBreakdown(needs: Float, wants: Float, savings: Float) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(24.dp)
+            .clip(RoundedCornerShape(12.dp))
+    ) {
+        Box(modifier = Modifier.weight(needs.coerceAtLeast(1f)).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
+        Box(modifier = Modifier.weight(wants.coerceAtLeast(1f)).fillMaxHeight().background(MaterialTheme.colorScheme.tertiary))
+        Box(modifier = Modifier.weight(savings.coerceAtLeast(1f)).fillMaxHeight().background(MaterialTheme.colorScheme.secondary))
+    }
+}
+
+@Composable
+fun BudgetDetailRow(label: String, amount: Double, color: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(12.dp).background(color, CircleShape))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(label, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+        }
+        Text(
+            "KES ${String.format("%,.0f", amount)}",
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+fun WealthProjectionCard(monthlySavings: Double) {
+    val rate = 0.08 / 12 // 8% APY
+    val projections = listOf(6, 12, 24)
+    
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Potential Savings Growth", fontWeight = FontWeight.Bold)
+            }
+            Text("Assuming 8% annual returns on GKash", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                projections.forEach { months ->
+                    val total = if (monthlySavings > 0) {
+                        monthlySavings * (Math.pow(1 + rate, months.toDouble()) - 1) / rate
+                    } else 0.0
+                    
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${months}mo", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "KES ${String.format("%,.0f", total)}",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -6,6 +6,7 @@ import com.example.g_kash.di.networkModule
 import com.example.g_kash.di.profileModule
 import com.example.g_kash.points.di.pointsModule
 import com.example.g_kash.wallet.di.walletModule
+import com.example.g_kash.payment.di.paymentModule
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -34,7 +35,8 @@ class GKashApplication : Application() {
                 networkModule,
                 profileModule,
                 walletModule,
-                pointsModule
+                pointsModule,
+                paymentModule
             )
         }
     }

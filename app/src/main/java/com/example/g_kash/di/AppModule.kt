@@ -56,10 +56,6 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import com.example.g_kash.authentication.data.ApiService
 import com.example.g_kash.authentication.data.ApiServiceImpl
-import com.example.g_kash.payment.data.PaymentApiService
-import com.example.g_kash.payment.data.PaymentRepository
-import com.example.g_kash.payment.data.PaymentRepositoryImpl
-import com.example.g_kash.payment.presentation.PaymentViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import org.koin.android.ext.koin.androidContext
@@ -152,7 +148,6 @@ val networkModule = module {
     single<AlphaVantageApiService> { AlphaVantageApiServiceImpl(get(named("alpha_vantage"))) }
     single { AccountsApiService(get(), get()) }
     single { ChatBotApiService(get()) }
-    single { PaymentApiService(get(), get()) }
     single<com.example.g_kash.otp.domain.OtpApiService> { com.example.g_kash.otp.data.OtpApiServiceImpl(get()) }
     factory { com.example.g_kash.otp.domain.SendOtpUseCase(get()) }
     factory { com.example.g_kash.otp.domain.VerifyOtpUseCase(get()) }
@@ -179,7 +174,6 @@ val appModule = module {
     single<TransactionRepository> { TransactionRepositoryImpl(get()) }
     single<BalanceRepository> { BalanceRepository() }
     single<InvestmentRepository> { KtorInvestmentRepository(get(), get()) }
-    single<PaymentRepository> { PaymentRepositoryImpl(get()) }
     single<FinancialLearningRepository> { FinancialLearningRepositoryImpl(get()) }
     single<ChatBotRepository> { ChatBotRepositoryImpl(get(), get()) }
     single<PointsRepository> { MockPointsRepository() }
@@ -210,5 +204,4 @@ val appModule = module {
     viewModel { ProfileViewModel(get()) }
     viewModel { TransactionsViewModel(get(), get()) }
     viewModel { PointsViewModel(get(), get(), get(), get(), get(), get(), get()) }
-    viewModel { (accountId: String) -> PaymentViewModel(get(), get(), accountId) }
 }

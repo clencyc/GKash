@@ -123,9 +123,11 @@ fun WalletScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onNavigateToBudgetSimulator,
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFD700).copy(alpha = 0.15f)),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                ),
                 shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFD700).copy(alpha = 0.3f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -134,15 +136,23 @@ fun WalletScreen(
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(Color(0xFFFF1493).copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
+                            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.TrendingUp, contentDescription = null, tint = Color(0xFFFF1493))
+                        Icon(
+                            Icons.Default.TrendingUp, 
+                            contentDescription = null, 
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("AI Budget Simulator", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                        Text("Simulate the 50-30-20 rule.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text(
+                            "Simulate the 50-30-20 rule.", 
+                            style = MaterialTheme.typography.bodySmall, 
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     }
                     Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
                 }

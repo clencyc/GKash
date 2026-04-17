@@ -22,14 +22,16 @@ fun SpendingGraphCard(
     transactions: List<Transaction>,
     modifier: Modifier = Modifier
 ) {
-    // Brand Colors
-    val PinkPremium = Color(0xFFFF1493)
-    val GoldPremium = Color(0xFFFFD700)
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
     
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -43,25 +45,25 @@ fun SpendingGraphCard(
                         "Spending Analysis",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
-                        color = Color(0xFF1A1A1A)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         "AI Predicted Trends",
                         style = MaterialTheme.typography.bodySmall,
-                        color = PinkPremium,
+                        color = primaryColor,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = GoldPremium.copy(alpha = 0.1f)
+                    color = secondaryColor.copy(alpha = 0.12f)
                 ) {
                     Text(
                         "Last 7 Days",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFB8860B)
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
             }
@@ -72,8 +74,8 @@ fun SpendingGraphCard(
             SpendingLineChart(
                 data = listOf(120f, 450f, 300f, 600f, 200f, 850f, 500f), // Mock historical
                 prediction = listOf(500f, 650f, 800f), // Mock prediction
-                lineColor = PinkPremium,
-                predictionColor = PinkPremium.copy(alpha = 0.4f)
+                lineColor = primaryColor,
+                predictionColor = primaryColor.copy(alpha = 0.4f)
             )
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -84,9 +86,9 @@ fun SpendingGraphCard(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                LegendItem("Actual", PinkPremium, isDashed = false)
+                LegendItem("Actual", primaryColor, isDashed = false)
                 Spacer(modifier = Modifier.width(20.dp))
-                LegendItem("Predicted", PinkPremium.copy(alpha = 0.4f), isDashed = true)
+                LegendItem("Predicted", primaryColor.copy(alpha = 0.4f), isDashed = true)
             }
         }
     }
@@ -181,6 +183,7 @@ fun SpendingLineChart(
         data.lastOrNull()?.let { value ->
             val x = (data.size - 1) * stepX
             val y = height - (value / maxVal * height)
+            // Use onSurface for the outer circle to match dark/light mode
             drawCircle(color = Color.White, radius = 6.dp.toPx(), center = Offset(x, y))
             drawCircle(color = lineColor, radius = 4.dp.toPx(), center = Offset(x, y))
         }
@@ -212,6 +215,6 @@ fun LegendItem(label: String, color: Color, isDashed: Boolean) {
             }
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
     }
 }

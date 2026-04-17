@@ -57,17 +57,9 @@ import com.example.g_kash.payment.data.PaymentReceipt
 import java.text.NumberFormat
 import java.util.Locale
 
-// --- BRAND-MATCHED COLORS ---
-private val GoldPremium = Color(0xFFFFD700)
-private val PinkPremium = Color(0xFFFF1493) // Vivid Magenta-Pink from logo
-private val WhitePure = Color(0xFFFFFFFF)
-private val DarkText = Color(0xFF1A1A1A)
-
-// USER SPECIFIED GOLD PALETTE
+// BRAND-MATCHED COLORS (Muted for dark mode compatibility)
 private val GoldSecondaryContainer = Color(0xFF795502)     // Dark Gold Container
-private val OnGoldSecondaryContainer = Color(0xFFFFFFFF)   // White
 private val GoldSecondaryContainerLight = Color(0xFFFFF8DC) // Light Gold Container
-private val OnGoldSecondaryContainerLight = Color(0xFF795502) // Dark Gold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,18 +85,18 @@ fun PaymentReceiptScreen(
                 title = { 
                     Text(
                         "Payment Receipt", 
-                        color = DarkText, 
+                        color = MaterialTheme.colorScheme.onSurface, 
                         fontWeight = FontWeight.Bold 
                     ) 
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = DarkText)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = WhitePure,
-                    titleContentColor = DarkText
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -126,7 +118,7 @@ fun PaymentReceiptScreen(
                     .scale(scale.value)
                     .clip(CircleShape)
                     .background(
-                        Brush.linearGradient(listOf(PinkPremium, PinkPremium.copy(alpha = 0.5f)))
+                        Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)))
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -144,7 +136,7 @@ fun PaymentReceiptScreen(
                 "Payment Successful!",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = PinkPremium
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(4.dp))
             Text(
@@ -156,10 +148,9 @@ fun PaymentReceiptScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // ── Amount display ────────────────────────────────────────
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = PinkPremium.copy(alpha = 0.1f),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
@@ -176,7 +167,7 @@ fun PaymentReceiptScreen(
                         text = formatKes(receipt.amount),
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.ExtraBold,
-                        color = PinkPremium
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -221,14 +212,14 @@ fun PaymentReceiptScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                         Surface(
-                            color = PinkPremium.copy(alpha = 0.1f),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                             shape = RoundedCornerShape(50.dp)
                         ) {
                             Text(
                                 receipt.status,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                 style = MaterialTheme.typography.labelMedium,
-                                color = PinkPremium,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -245,11 +236,11 @@ fun PaymentReceiptScreen(
                     .height(54.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = PinkPremium,
-                    contentColor = WhitePure
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
-                Text("Done", color = WhitePure, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Done", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
 
             Spacer(Modifier.height(12.dp))

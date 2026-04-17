@@ -32,85 +32,99 @@ fun CustomBottomNavBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        contentAlignment = Alignment.BottomCenter
     ) {
-        Row(
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+                .height(72.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+            shape = RoundedCornerShape(32.dp),
+            shadowElevation = 12.dp,
+            border = androidx.compose.foundation.BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+            )
         ) {
-            // Home
-            BottomNavIconButton(
-                icon = Icons.Filled.Home,
-                label = "Home",
-                isSelected = currentRoute == "main/home",
-                onClick = {
-                    navController.navigate("main/home") {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Home
+                BottomNavIconButton(
+                    icon = Icons.Filled.Home,
+                    label = "Home",
+                    isSelected = currentRoute == "main/home",
+                    onClick = {
+                        navController.navigate("main/home") {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
-            )
+                )
 
-            // Learn
-            BottomNavIconButton(
-                icon = Icons.Filled.School,
-                label = "Learn",
-                isSelected = currentRoute == "main/learn",
-                onClick = {
-                    navController.navigate("main/learn") {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                // Learn
+                BottomNavIconButton(
+                    icon = Icons.Filled.School,
+                    label = "Learn",
+                    isSelected = currentRoute == "main/learn",
+                    onClick = {
+                        navController.navigate("main/learn") {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
-            )
+                )
 
-            // Investment Simulator - Central Big Button
-            InvestmentSimulatorButton(
-                isSelected = currentRoute == "main/investment_simulator",
-                onClick = {
-                    navController.navigate("main/investment_simulator") {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                // Simulator - Central Big Button
+                SimulatorCentralButton(
+                    isSelected = currentRoute == "main/investment_simulator",
+                    onClick = {
+                        navController.navigate("main/investment_simulator") {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
-            )
+                )
 
-            // Chat
-            BottomNavIconButton(
-                icon = Icons.Filled.Chat,
-                label = "Chat",
-                isSelected = currentRoute == "main/chat",
-                onClick = {
-                    navController.navigate("main/chat") {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                // Chat
+                BottomNavIconButton(
+                    icon = Icons.Filled.Chat,
+                    label = "Chat",
+                    isSelected = currentRoute == "main/chat",
+                    onClick = {
+                        navController.navigate("main/chat") {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
-            )
+                )
 
-            // Profile
-            BottomNavIconButton(
-                icon = Icons.Filled.Person,
-                label = "Profile",
-                isSelected = currentRoute == "main/profile",
-                onClick = {
-                    navController.navigate("main/profile") {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                // Profile
+                BottomNavIconButton(
+                    icon = Icons.Filled.Person,
+                    label = "Profile",
+                    isSelected = currentRoute == "main/profile",
+                    onClick = {
+                        navController.navigate("main/profile") {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     }
 }
@@ -164,7 +178,7 @@ fun BottomNavIconButton(
 }
 
 @Composable
-fun InvestmentSimulatorButton(
+fun SimulatorCentralButton(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -240,14 +254,14 @@ fun InvestmentSimulatorButton(
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.SportsEsports,
-                    contentDescription = "Game",
+                    imageVector = Icons.Default.Analytics,
+                    contentDescription = "Simulator",
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = "GAME",
-                    fontSize = 8.sp,
+                    text = "SIMULATOR",
+                    fontSize = 7.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )

@@ -27,11 +27,7 @@ import androidx.compose.ui.unit.sp
 import java.text.NumberFormat
 import java.util.Locale
 
-// BRAND COLORS
-private val GoldPremium = Color(0xFFFFD700)
-private val PinkPremium = Color(0xFFFF1493)
-private val WhitePure = Color(0xFFFFFFFF)
-private val DarkText = Color(0xFF1A1A1A)
+// Colors are now handled via MaterialTheme.colorScheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,13 +46,17 @@ fun BudgetSimulatorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Budget Simulator", fontWeight = FontWeight.Bold, color = DarkText) },
+                title = { Text("Budget Simulator", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = DarkText)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = GoldPremium)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
@@ -64,7 +64,7 @@ fun BudgetSimulatorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(WhitePure)
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -73,14 +73,14 @@ fun BudgetSimulatorScreen(
                 "Simulate your financial future",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold,
-                color = PinkPremium,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             
             Text(
                 "Enter an amount to see the 50-30-20 rule in action.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
@@ -95,8 +95,8 @@ fun BudgetSimulatorScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PinkPremium,
-                    focusedLabelColor = PinkPremium
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary
                 )
             )
 
@@ -108,7 +108,7 @@ fun BudgetSimulatorScreen(
                     title = "Needs (50%)",
                     amount = needs,
                     description = "Rent, food, utilities, health.",
-                    color = Color(0xFF2196F3),
+                    color = MaterialTheme.colorScheme.primary,
                     icon = Icons.Default.Info
                 )
                 
@@ -118,7 +118,7 @@ fun BudgetSimulatorScreen(
                     title = "Wants (30%)",
                     amount = wants,
                     description = "Dining out, entertainment, hobbies.",
-                    color = Color(0xFFFF9800),
+                    color = MaterialTheme.colorScheme.tertiary,
                     icon = Icons.Default.Star
                 )
 
@@ -128,7 +128,7 @@ fun BudgetSimulatorScreen(
                     title = "Savings & Investment (20%)",
                     amount = savings,
                     description = "Building wealth for your future.",
-                    color = PinkPremium,
+                    color = MaterialTheme.colorScheme.secondary,
                     icon = Icons.Default.Savings,
                     isHighlight = true
                 )
@@ -138,28 +138,28 @@ fun BudgetSimulatorScreen(
                 // Agentic AI Call to Action
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = GoldPremium.copy(alpha = 0.15f)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.TrendingUp, contentDescription = null, tint = PinkPremium, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             "Ready to make your money work?",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
-                            color = DarkText
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             "Your monthly investment potential is ${formatKes(savings)}.",
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.DarkGray
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = { onInvestClick(savings) },
-                            colors = ButtonDefaults.buttonColors(containerColor = PinkPremium),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth().height(48.dp)
                         ) {
@@ -209,8 +209,8 @@ fun BudgetCategoryCard(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.Bold, color = DarkText)
-                Text(description, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Text(title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
             }
             Text(
                 formatKes(amount),

@@ -1,0 +1,60 @@
+name: Build and Deploy APK to GH Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Prepare Deployment Folder
+        run: |
+          mkdir -p release
+          cp app/build/outputs/apk/release/*.apk release/GKash-release.apk
+          echo "<html>
+          <head>
+            <title>GKash APK Download</title>
+            <style>
+              body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f4f4f9; }
+              .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+              a { display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: #6200ee; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; }
+              a:hover { background: #3700b3; }
+            </style>
+          </head>
+          <body>
+            <div class='card'>
+              <h1>GKash Android App</h1>
+              <p>Download the latest release APK:</p>
+              <a href='GKash-release.apk' download>Download APK</a>
+            </div>
+          </body>
+          </html>" > release/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: release

@@ -1,5 +1,6 @@
 package com.example.g_kash.authentication.presentation
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,12 +20,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import com.example.g_kash.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,22 +63,13 @@ fun ImprovedCreateAccountScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(vertical = 16.dp)
             ) {
-                Box(
+                Image(
+                    painter = painterResource(id = R.drawable.gkash_logo),
+                    contentDescription = "GKash Logo",
                     modifier = Modifier
                         .size(60.dp)
-                        .background(
-                            Color(0xFF2E7D32),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "$",
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                        .clip(RoundedCornerShape(12.dp))
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Learn. Invest. Grow",
@@ -300,22 +294,13 @@ fun ImprovedCreatePinScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(vertical = 16.dp)
             ) {
-                Box(
+                Image(
+                    painter = painterResource(id = R.drawable.gkash_logo),
+                    contentDescription = "GKash Logo",
                     modifier = Modifier
                         .size(60.dp)
-                        .background(
-                            Color(0xFF2E7D32),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "$",
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                        .clip(RoundedCornerShape(12.dp))
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Learn. Invest. Grow",
@@ -506,22 +491,13 @@ fun ImprovedConfirmPinScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(vertical = 16.dp)
             ) {
-                Box(
+                Image(
+                    painter = painterResource(id = R.drawable.gkash_logo),
+                    contentDescription = "GKash Logo",
                     modifier = Modifier
                         .size(60.dp)
-                        .background(
-                            Color(0xFF2E7D32),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "$",
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                        .clip(RoundedCornerShape(12.dp))
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Learn. Invest. Grow",

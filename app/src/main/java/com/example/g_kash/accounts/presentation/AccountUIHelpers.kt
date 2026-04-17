@@ -5,6 +5,8 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import java.text.NumberFormat
@@ -31,11 +33,13 @@ fun getAccountTypeIcon(type: AccountType): ImageVector {
     }
 }
 
+@Composable
 fun getAccountTypeColor(type: AccountType): Color {
+    val isDark = isSystemInDarkTheme()
     return when (type) {
-        AccountType.BALANCED_FUND -> Color(0xFF4CAF50)
-        AccountType.FIXED_INCOME_FUND -> Color(0xFF2196F3)
-        AccountType.MONEY_MARKET_FUND -> Color(0xFFFFC107)
-        AccountType.STOCK_MARKET -> Color(0xFFFF5722)
+        AccountType.BALANCED_FUND -> if (isDark) Color(0xFF81C784) else Color(0xFF4CAF50)
+        AccountType.FIXED_INCOME_FUND -> if (isDark) Color(0xFF64B5F6) else Color(0xFF2196F3)
+        AccountType.MONEY_MARKET_FUND -> if (isDark) Color(0xFFFFD54F) else Color(0xFFFFC107)
+        AccountType.STOCK_MARKET -> if (isDark) Color(0xFFFF8A65) else Color(0xFFFF5722)
     }
 }

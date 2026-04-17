@@ -6,7 +6,7 @@ interface PaymentRepository {
 }
 
 class PaymentRepositoryImpl(
-    private val apiService: PaymentApiService
+    private val apiService: GkashPaymentApiService
 ) : PaymentRepository {
 
     override suspend fun initiateDeposit(request: DepositRequest): Result<DepositResponse> =

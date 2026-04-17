@@ -14,9 +14,9 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.flow.first
 
-private const val TAG = "PaymentApiService"
+private const val TAG = "GkashPaymentApiService"
 
-class PaymentApiService(
+class GkashPaymentApiService(
     private val client: HttpClient,
     private val sessionStorage: SessionStorage,
     private val baseUrl: String = "https://gkash.onrender.com/api"

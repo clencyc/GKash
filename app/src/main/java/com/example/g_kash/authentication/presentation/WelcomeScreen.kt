@@ -2,6 +2,7 @@ package com.example.g_kash.authentication.presentation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -18,6 +19,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import com.example.g_kash.R
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -342,28 +345,14 @@ private fun GetStartedSlide(
             )
 
             // Main logo
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .scale(scale)
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                PrimaryPink,
-                                DarkPink
-                            )
-                        ),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "$",
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                Image(
+                    painter = painterResource(id = R.drawable.gkash_logo),
+                    contentDescription = "GKash Logo",
+                    modifier = Modifier
+                        .size(100.dp)
+                        .scale(scale)
+                        .clip(RoundedCornerShape(20.dp))
                 )
-            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))

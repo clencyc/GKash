@@ -2,6 +2,7 @@ package com.example.g_kash.chat.presentation
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,8 +43,9 @@ fun ChatScreen(
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    // Auto-scroll to bottom when new messages arrive
-    LaunchedEffect(uiState.messages.size) {
+    // Auto-scroll to bottom when new messages arrive OR keyboard shown
+    val imeVisible = WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
+    LaunchedEffect(uiState.messages.size, imeVisible) {
         if (uiState.messages.isNotEmpty()) {
             coroutineScope.launch {
                 listState.animateScrollToItem(uiState.messages.size - 1)
@@ -55,6 +57,8 @@ fun ChatScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .navigationBarsPadding()
+            .imePadding()
     ) {
         // Header
         ChatHeader(
@@ -73,9 +77,7 @@ fun ChatScreen(
         ) {
             // Welcome message if no messages
             if (uiState.messages.isEmpty()) {
-                item {
-                    WelcomeMessage()
-                }
+                item { WelcomeMessage() }
                 item {
                     QuickStartSuggestions(
                         onSuggestionClick = viewModel::sendMessage
@@ -88,7 +90,7 @@ fun ChatScreen(
             }
             
             // Show typing indicator
-            if (uiState.isTyping) {
+            if (uiState.isTyping || uiState.isLoading) {
                 item {
                     TypingIndicator()
                 }
@@ -100,8 +102,10 @@ fun ChatScreen(
             message = uiState.currentMessage,
             onMessageChange = viewModel::updateCurrentMessage,
             onSendMessage = {
-                viewModel.sendMessage(uiState.currentMessage)
-                keyboardController?.hide()
+                if (uiState.currentMessage.isNotBlank()) {
+                    viewModel.sendMessage(uiState.currentMessage)
+                    // keyboardController?.hide() // Keep keyboard open for better flow
+                }
             },
             isLoading = uiState.isLoading
         )
@@ -475,7 +479,6 @@ fun TypingIndicator() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageInputSection(
     message: String,
@@ -486,72 +489,90 @@ fun MessageInputSection(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
+        shadowElevation = 16.dp, // Increased elevation for a floating feel
+        tonalElevation = 2.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.Bottom
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Card(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(28.dp)
+                    ),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(28.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp, vertical = 14.dp)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart
                 ) {
+                    if (message.isEmpty()) {
+                        Text(
+                            text = "Ask about your finances...",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            fontSize = 16.sp
+                        )
+                    }
+                    
                     BasicTextField(
                         value = message,
                         onValueChange = onMessageChange,
-                        modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 16.sp
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Send
                         ),
                         keyboardActions = KeyboardActions(
-                            onSend = { onSendMessage() }
+                            onSend = { if (message.isNotBlank()) onSendMessage() }
                         ),
-                        maxLines = 4,
-                        decorationBox = { innerTextField ->
-                            if (message.isEmpty()) {
-                                Text(
-                                    text = "Ask about your finances...",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    fontSize = 16.sp
-                                )
-                            }
-                            innerTextField()
-                        }
+                        maxLines = 6,
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary)
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.width(8.dp))
-            
             FloatingActionButton(
-                onClick = onSendMessage,
-                modifier = Modifier.size(48.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                onClick = { if (message.isNotBlank()) onSendMessage() },
+                modifier = Modifier.size(52.dp),
+                shape = CircleShape,
+                containerColor = if (message.isBlank()) 
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f) 
+                else 
+                    MaterialTheme.colorScheme.primary,
+                contentColor = if (message.isBlank())
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                else
+                    MaterialTheme.colorScheme.onPrimary,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 2.dp,
+                    pressedElevation = 8.dp
+                )
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
+                        strokeWidth = 3.dp
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.Send,
-                        contentDescription = "Send message"
+                        contentDescription = "Send message",
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }

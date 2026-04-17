@@ -81,17 +81,9 @@ import org.koin.core.parameter.parametersOf
 import java.text.NumberFormat
 import java.util.Locale
 
-// BRAND-MATCHED COLORS
-private val GoldPremium = Color(0xFFFFD700)
-private val PinkPremium = Color(0xFFFF1493) // Vivid Magenta-Pink from logo
-private val WhitePure = Color(0xFFFFFFFF)
-private val DarkText = Color(0xFF1A1A1A)
-
-// USER SPECIFIED GOLD PALETTE
+// BRAND-MATCHED COLORS (Muted for dark mode compatibility)
 private val GoldSecondaryContainer = Color(0xFF795502)     // Dark Gold Container
-private val OnGoldSecondaryContainer = Color(0xFFFFFFFF)   // White
 private val GoldSecondaryContainerLight = Color(0xFFFFF8DC) // Light Gold Container
-private val OnGoldSecondaryContainerLight = Color(0xFF795502) // Dark Gold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,18 +133,18 @@ fun DepositScreen(
                 title = { 
                     Text(
                         "Deposit to GKash", 
-                        color = DarkText, 
+                        color = MaterialTheme.colorScheme.onSurface, 
                         fontWeight = FontWeight.Bold 
                     ) 
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = DarkText)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = WhitePure,
-                    titleContentColor = DarkText
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -171,7 +163,7 @@ fun DepositScreen(
                     .height(140.dp)
                     .background(
                         Brush.linearGradient(
-                            listOf(PinkPremium, PinkPremium.copy(alpha = 0.7f))
+                            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -220,7 +212,7 @@ fun DepositScreen(
                             .height(100.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = PinkPremium)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else if (uiState.accounts.isEmpty()) {
                     Card(
@@ -237,8 +229,8 @@ fun DepositScreen(
                             Button(
                                 onClick = { viewModel.setShowCreateAccountDialog(true) },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = PinkPremium,
-                                    contentColor = WhitePure
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
                                 modifier = Modifier.align(Alignment.End)
                             ) {
@@ -278,7 +270,7 @@ fun DepositScreen(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("e.g. 0712345678") },
                     leadingIcon = {
-                        Icon(Icons.Default.Phone, contentDescription = null, tint = GoldSecondaryContainer)
+                        Icon(Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true,
@@ -306,7 +298,7 @@ fun DepositScreen(
                             modifier = Modifier.padding(start = 12.dp),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = GoldSecondaryContainer
+                            color = MaterialTheme.colorScheme.secondary
                         )
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -393,29 +385,33 @@ fun DepositScreen(
                         uiState.amount.isNotBlank(),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = GoldPremium,
-                        contentColor = DarkText
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = MaterialTheme.colorScheme.onSecondary
                     )
                 ) {
-                    when (val ws = uiState.workflowState) {
+                    when (uiState.workflowState) {
                         is PaymentWorkflowState.Loading -> {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                color = DarkText,
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onSecondary,
                                 strokeWidth = 2.dp
                             )
                             Spacer(Modifier.width(10.dp))
-                            Text("Sending STK Push…", color = DarkText, fontWeight = FontWeight.SemiBold)
+                            Text("Sending STK Push…", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.SemiBold)
                         }
                         is PaymentWorkflowState.AwaitingSTK -> {
-                            Icon(Icons.Default.Refresh, contentDescription = null, tint = DarkText)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Waiting for M-Pesa…", color = DarkText, fontWeight = FontWeight.SemiBold)
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onSecondary,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text("Waiting for M-Pesa…", color = MaterialTheme.colorScheme.onSecondary, fontWeight = FontWeight.SemiBold)
                         }
                         else -> {
                             Text(
                                 "Invest Now",
-                                color = DarkText,
+                                color = MaterialTheme.colorScheme.onSecondary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
@@ -439,8 +435,8 @@ private fun AccountSelectCard(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val borderColor = if (selected) PinkPremium else Color.Transparent
-    val bgColor = if (selected) PinkPremium.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+    val bgColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
 
     Card(
         modifier = Modifier
@@ -457,7 +453,7 @@ private fun AccountSelectCard(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(if (selected) PinkPremium else MaterialTheme.colorScheme.surfaceVariant),
+                        .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     if (selected) {
@@ -481,7 +477,7 @@ private fun AccountSelectCard(
                     Text(
                         "Selected",
                         style = MaterialTheme.typography.labelSmall,
-                        color = PinkPremium,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -498,7 +494,7 @@ private fun AccountSelectCard(
                 text = formatKes(account.accountBalance),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (selected) PinkPremium else MaterialTheme.colorScheme.primary
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -520,7 +516,7 @@ private fun AwaitingPaymentCard(message: String) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = PinkPremium.copy(alpha = 0.12f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
         shape = RoundedCornerShape(14.dp)
     ) {
         Row(
@@ -532,7 +528,7 @@ private fun AwaitingPaymentCard(message: String) {
                     .size(48.dp)
                     .scale(scale)
                     .clip(CircleShape)
-                    .background(PinkPremium),
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Text("M", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
@@ -543,7 +539,7 @@ private fun AwaitingPaymentCard(message: String) {
                     "Awaiting M-Pesa Approval",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = PinkPremium
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
