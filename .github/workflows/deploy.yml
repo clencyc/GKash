@@ -28,33 +28,73 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --stacktrace
 
       - name: Prepare Deployment Folder
         run: |
           mkdir -p release
-          cp app/build/outputs/apk/release/*.apk release/GKash-release.apk
-          echo "<html>
+          # Find any APK in the release output and copy it
+          APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            echo "Error: No APK found!"
+            exit 1
+          fi
+          cp "$APK_FILE" release/GKash-release.apk
+          
+          # Add .nojekyll to prevent Jekyll from processing the site
+          touch release/.nojekyll
+          
+          echo "<!DOCTYPE html>
+          <html>
           <head>
-            <title>GKash APK Download</title>
+            <meta charset='utf-8'>
+            <meta name='viewport' content='width=device-width, initial-scale=1'>
+            <title>GKash | Download Latest Release</title>
             <style>
-              body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f4f4f9; }
-              .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-              a { display: inline-block; margin-top: 1rem; padding: 0.75rem 1.5rem; background: #6200ee; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; }
-              a:hover { background: #3700b3; }
+              :root { --primary: #D91A5B; --dark: #1A1A2E; }
+              body { 
+                font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                display: flex; align-items: center; justify-content: center; 
+                min-height: 100vh; margin: 0; background: #f8f9fa; color: #333;
+              }
+              .card { 
+                background: white; padding: 2.5rem; border-radius: 20px; 
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; 
+                max-width: 400px; width: 90%;
+              }
+              .logo { width: 80px; height: 80px; margin-bottom: 1.5rem; border-radius: 16px; box-shadow: 0 4px 10px rgba(217,26,91,0.3); }
+              h1 { margin: 0; color: var(--dark); font-size: 1.8rem; }
+              p { color: #666; margin: 1rem 0 2rem; line-height: 1.5; }
+              .btn { 
+                display: inline-block; padding: 1rem 2rem; 
+                background: var(--primary); color: white; 
+                text-decoration: none; border-radius: 12px; 
+                font-weight: bold; transition: all 0.3s ease;
+                box-shadow: 0 4px 12px rgba(217,26,91,0.4);
+              }
+              .btn:hover { background: #C4164E; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(217,26,91,0.5); }
+              .footer { margin-top: 2rem; font-size: 0.8rem; color: #999; }
             </style>
           </head>
           <body>
             <div class='card'>
-              <h1>GKash Android App</h1>
-              <p>Download the latest release APK:</p>
-              <a href='GKash-release.apk' download>Download APK</a>
+              <img src='GKash-logo-placeholder.png' alt='GKash Logo' class='logo' onerror=\"this.style.display='none'\">
+              <h1>GKash Android</h1>
+              <p>Download the latest version of GKash to start your financial journey.</p>
+              <a href='GKash-release.apk' class='btn' download>Download APK</a>
+              <div class='footer'>Version 1.0.0 | Financial Simulator Updates</div>
             </div>
           </body>
           </html>" > release/index.html
+          
+          # Copy the logo for the download page too if possible
+          if [ -f "app/src/main/res/drawable/gkash_logo.png" ]; then
+            cp "app/src/main/res/drawable/gkash_logo.png" release/GKash-logo-placeholder.png
+          fi
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: release
+          clean: true
