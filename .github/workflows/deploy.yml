@@ -27,19 +27,19 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Prepare Deployment Folder
         run: |
           mkdir -p release
-          # Find any APK in the release output and copy it
-          APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          # Find the debug APK and copy it
+          APK_FILE=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
           if [ -z "$APK_FILE" ]; then
             echo "Error: No APK found!"
             exit 1
           fi
-          cp "$APK_FILE" release/GKash-release.apk
+          cp "$APK_FILE" release/GKash-debug.apk
           
           # Add .nojekyll to prevent Jekyll from processing the site
           touch release/.nojekyll
@@ -81,7 +81,7 @@ jobs:
               <img src='GKash-logo-placeholder.png' alt='GKash Logo' class='logo' onerror=\"this.style.display='none'\">
               <h1>GKash Android</h1>
               <p>Download the latest version of GKash to start your financial journey.</p>
-              <a href='GKash-release.apk' class='btn' download>Download APK</a>
+              <a href='GKash-debug.apk' class='btn' download>Download APK</a>
               <div class='footer'>Version 1.0.0 | Financial Simulator Updates</div>
             </div>
           </body>
