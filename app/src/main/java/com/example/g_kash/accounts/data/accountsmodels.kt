@@ -64,3 +64,12 @@ data class UpdateAccountBalanceRequest(
     val accountId: String,
     val amount: Double
 )
+
+// For GET /accounts/{id}/balance
+@Serializable
+data class AccountBalanceResponse(
+    val success: Boolean = false,
+    @SerialName("account_balance")
+    val accountBalance: Double = 0.0,
+    val message: String? = null
+)

@@ -8,6 +8,7 @@ import com.example.g_kash.accounts.domain.AccountsRepository
 import com.example.g_kash.payment.data.DepositRequest
 import com.example.g_kash.payment.data.PaymentReceipt
 import com.example.g_kash.payment.data.PaymentRepository
+import com.example.g_kash.wallet.data.BalanceRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +28,7 @@ private const val TAG = "PaymentViewModel"
 class PaymentViewModel(
     private val paymentRepository: PaymentRepository,
     private val accountsRepository: AccountsRepository,
+    private val balanceRepository: BalanceRepository,
     /** Pre-selected account id when entry is from AccountDetails */
     private val preselectedAccountId: String = ""
 ) : ViewModel() {
@@ -142,8 +144,11 @@ class PaymentViewModel(
                     // Poll until confirmed
                     awaitPaymentConfirmation(txId, amount).fold(
                         onSuccess = { statusResponse ->
-                            val confirmed = statusResponse.confirmed ||
-                                statusResponse.status.equals("SUCCESS", ignoreCase = true)
+                            Log.d(TAG, "Polling Success: status=${statusResponse.status}, confirmed=${statusResponse.confirmed}")
+                            val confirmed = statusResponse.confirmed || 
+                                statusResponse.status.equals("SUCCESS", ignoreCase = true) ||
+                                statusResponse.status.equals("completed", ignoreCase = true)
+
                             if (!confirmed) {
                                 handleFailure("Payment is still pending. Please try again shortly.")
                                 return@fold
@@ -151,8 +156,12 @@ class PaymentViewModel(
 
                             val accountType = state.selectedAccount?.accountType ?: "Account"
                             val reference = statusResponse.transactionReference
+                                ?: statusResponse.transactionId
                                 ?: txId.takeLast(10).uppercase(Locale.getDefault())
-                            val timestamp = statusResponse.timestamp ?: nowTimestamp()
+                            
+                            val timestamp = statusResponse.timestamp 
+                                ?: statusResponse.date 
+                                ?: nowTimestamp()
 
                             val receipt = PaymentReceipt(
                                 transactionReference = reference,
@@ -162,6 +171,11 @@ class PaymentViewModel(
                                 timestamp = timestamp,
                                 phone = phone
                             )
+                            
+                            // Update shared balance repository
+                            balanceRepository.adjustBalance(amount)
+                            android.util.Log.i(TAG, "Balance adjusted by +$amount")
+
                             _uiState.update { it.copy(workflowState = PaymentWorkflowState.Success(receipt)) }
                         },
                         onFailure = { e ->
@@ -186,9 +200,13 @@ class PaymentViewModel(
                 val result = paymentRepository.getTransactionStatus(transactionId)
                 if (result.isSuccess) {
                     val status = result.getOrThrow()
-                    if (status.confirmed || status.status.equals("SUCCESS", ignoreCase = true)) {
+                    if (status.confirmed || 
+                        status.status.equals("SUCCESS", ignoreCase = true) ||
+                        status.status.equals("completed", ignoreCase = true)) {
+                        Log.i(TAG, "✓ Payment confirmed: $transactionId")
                         return@withTimeoutOrNull Result.success(status)
                     }
+                    Log.d(TAG, "Payment still pending (attempt ${attempt + 1}): status=${status.status}")
                     if (status.status.equals("FAILED", ignoreCase = true) || 
                         status.status.equals("CANCELLED", ignoreCase = true)) {
                         return@withTimeoutOrNull Result.failure(

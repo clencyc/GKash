@@ -17,7 +17,8 @@ data class AccountsUiState(
     val totalBalance: Double = 0.0,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val selectedAccount: Account? = null
+    val selectedAccount: Account? = null,
+    val selectedAccountBalance: Double? = null
 )
 
 /**
@@ -31,9 +32,19 @@ class AccountsViewModel(
     val uiState: StateFlow<AccountsUiState> = _uiState.asStateFlow()
 
     init {
-        // Load initial data when the ViewModel is created
-        loadUserAccounts()
-        loadTotalBalance()
+        // Collect shared accounts list
+        viewModelScope.launch {
+            accountsRepository.accountsStream.collect { accounts ->
+                _uiState.update { it.copy(accounts = accounts, isLoading = false) }
+            }
+        }
+        
+        // Collect shared total balance
+        viewModelScope.launch {
+            accountsRepository.totalBalanceStream.collect { balance ->
+                _uiState.update { it.copy(totalBalance = balance) }
+            }
+        }
     }
 
     /**
@@ -42,30 +53,7 @@ class AccountsViewModel(
     fun loadUserAccounts() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-
-            // FIX 2 & 4: Use the correct repository name and the recommended flow collection
-            accountsRepository.getUserAccounts()
-                .onEach { result ->
-                    result.fold(
-                        onSuccess = { accounts ->
-                            _uiState.update {
-                                it.copy(
-                                    accounts = accounts,
-                                    isLoading = false
-                                )
-                            }
-                        },
-                        onFailure = { exception ->
-                            _uiState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    error = exception.message ?: "Failed to load accounts"
-                                )
-                            }
-                        }
-                    )
-                }
-                .launchIn(viewModelScope) // Use launchIn for safer collection
+            accountsRepository.refresh()
         }
     }
 
@@ -74,21 +62,7 @@ class AccountsViewModel(
      */
     fun loadTotalBalance() {
         viewModelScope.launch {
-            // FIX 3: Use the correct repository property name 'accountsRepository'
-            accountsRepository.getTotalBalance()
-                .onEach { result ->
-                    result.fold(
-                        onSuccess = { balance ->
-                            _uiState.update { it.copy(totalBalance = balance) }
-                        },
-                        onFailure = { exception ->
-                            _uiState.update {
-                                it.copy(error = exception.message ?: "Failed to load balance")
-                            }
-                        }
-                    )
-                }
-                .launchIn(viewModelScope)
+            accountsRepository.refresh()
         }
     }
 
@@ -175,5 +149,29 @@ class AccountsViewModel(
      */
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    /**
+     * Load balance for a specific account
+     */
+    fun loadAccountBalance(accountId: String) {
+        viewModelScope.launch {
+            accountsRepository.getAccountBalance(accountId)
+                .onEach { result ->
+                    result.fold(
+                        onSuccess = { response ->
+                            _uiState.update { 
+                                it.copy(selectedAccountBalance = response.accountBalance) 
+                            }
+                        },
+                        onFailure = { exception ->
+                            _uiState.update {
+                                it.copy(error = exception.message ?: "Failed to load account balance")
+                            }
+                        }
+                    )
+                }
+                .launchIn(viewModelScope)
+        }
     }
 }

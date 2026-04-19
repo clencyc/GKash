@@ -38,14 +38,21 @@ data class DepositResponse(
 
 @Serializable
 data class PaymentStatusResponse(
-    /** "SUCCESS", "FAILED", "PENDING", etc. */
+    /** "SUCCESS", "FAILED", "PENDING", "completed", etc. */
     val status: String? = null,
     /** True when payment is confirmed by M-Pesa */
     val confirmed: Boolean = false,
+    /** Backend success flag */
+    val success: Boolean = false,
     val amount: Double? = null,
     val timestamp: String? = null,
+    /** Alternative timestamp field from some endpoints */
+    val date: String? = null,
     @SerialName("transactionReference")
     val transactionReference: String? = null,
+    /** Internal transaction id from status body */
+    @SerialName("transaction_id")
+    val transactionId: String? = null,
     val message: String? = null
 )
 

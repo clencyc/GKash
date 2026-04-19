@@ -18,19 +18,23 @@ class AccountsApiService(
     suspend fun getUserAccounts(): Result<List<Account>> {
         return try {
             val token = sessionStorage.authTokenStream.first()
+            android.util.Log.d("ACCOUNTS_API", "getUserAccounts - Token: ${if (token != null) "Present" else "NULL"}")
+            
             val response = client.get("$baseUrl/accounts") {
                 contentType(ContentType.Application.Json)
                 token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
             }
 
+            android.util.Log.d("ACCOUNTS_API", "Response: ${response.status}")
+            
             if (response.status == HttpStatusCode.OK || response.status == HttpStatusCode.Created) {
-                // The backend returns a raw list [...] instead of a wrapped object
+                val body = response.bodyAsText()
+                android.util.Log.d("ACCOUNTS_API", "Response Body: $body")
                 val accounts: List<Account> = response.body()
                 Result.success(accounts)
-            } else if (response.status == HttpStatusCode.NotFound) {
-                // Return an empty list for 404 (No accounts found) instead of a failure
-                Result.success(emptyList())
             } else {
+                val errorBody = response.bodyAsText()
+                android.util.Log.e("ACCOUNTS_API", "Failed to fetch accounts. Status: ${response.status}, Body: $errorBody")
                 Result.failure(Exception("Failed to fetch accounts: ${response.status}"))
             }
         } catch (e: Exception) {
@@ -110,6 +114,29 @@ class AccountsApiService(
                 Result.success(updatedAccount)
             } else {
                 Result.failure(Exception("Failed to update balance: ${response.status}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Corresponds to: GET /accounts/{id}/balance
+     * Fetches the current balance of a specific account.
+     */
+    suspend fun getAccountBalance(accountId: String): Result<AccountBalanceResponse> {
+        return try {
+            val token = sessionStorage.authTokenStream.first()
+            val response = client.get("$baseUrl/accounts/$accountId/balance") {
+                contentType(ContentType.Application.Json)
+                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+            }
+
+            if (response.status == HttpStatusCode.OK) {
+                val balanceResponse: AccountBalanceResponse = response.body()
+                Result.success(balanceResponse)
+            } else {
+                Result.failure(Exception("Failed to fetch balance: ${response.status}"))
             }
         } catch (e: Exception) {
             Result.failure(e)

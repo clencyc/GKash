@@ -15,6 +15,6 @@ val paymentModule = module {
     }
     
     viewModel { (accountId: String) -> 
-        PaymentViewModel(get(), get(), accountId) 
+        PaymentViewModel(get(), get(), get(), accountId) 
     }
 }

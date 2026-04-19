@@ -224,8 +224,7 @@ fun AppNavigation() {
                         onNavigateToAccountDetails = { accountId -> navController.navigate("account_details/$accountId") },
                         onNavigateToTransactionHistory = { navController.navigate("main/transactions") },
                         onNavigateToInvestment = { navController.navigate(Destination.Deposit.createRoute("")) },
-                        onNavigateToBudgetSimulator = { navController.navigate(Destination.BudgetSimulator.route) },
-                        userId = ""
+                        onNavigateToBudgetSimulator = { navController.navigate(Destination.BudgetSimulator.route) }
                     )
                 }
                 
@@ -295,6 +294,9 @@ fun AppNavigation() {
                 // Detail Screens (without bottom bar)
                 composable("accounts") {
                     AccountsScreen(
+                        onNavigateToAccountDetails = { accountId ->
+                            navController.navigate("account_details/$accountId")
+                        },
                         onNavigateToTransactions = { accountId ->
                             navController.navigate("account_transactions/$accountId")
                         },

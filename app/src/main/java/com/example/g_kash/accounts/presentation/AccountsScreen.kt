@@ -39,8 +39,9 @@ enum class AccountType(val displayName: String, val apiValue: String) {
 @Composable
 fun AccountsScreen(
     viewModel: AccountsViewModel = koinViewModel(),
+    onNavigateToAccountDetails: (String) -> Unit,
     onNavigateToTransactions: (String) -> Unit,
-    onNavigateToDeposit: (String) -> Unit, // NEW
+    onNavigateToDeposit: (String) -> Unit,
     onNavigateBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -158,10 +159,13 @@ fun AccountsScreen(
                             AccountCard(
                                 account = account,
                                 onClick = {
-                                    onNavigateToTransactions(account.id)
+                                    onNavigateToAccountDetails(account.id)
                                 },
                                 onInvestClick = {
                                     onNavigateToDeposit(account.id)
+                                },
+                                onDeleteClick = {
+                                    viewModel.selectAccount(account)
                                 }
                             )
                         }
@@ -175,11 +179,31 @@ fun AccountsScreen(
     if (showCreateDialog) {
         CreateAccountDialog(
             onDismiss = { showCreateDialog = false },
-            // --- FIX 3: UPDATE THE `onCreate` LAMBDA SIGNATURE ---
             onCreate = { accountApiValue ->
-                // The ViewModel expects only the API string value
                 viewModel.createAccount(accountApiValue)
                 showCreateDialog = false
+            }
+        )
+    }
+
+    // Delete Confirmation Dialog
+    uiState.selectedAccount?.let { account ->
+        AlertDialog(
+            onDismissRequest = { viewModel.deselectAccount() },
+            icon = { Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Delete Account?") },
+            text = { Text("Are you sure you want to delete '${account.accountType}'? This will remove all associated data and cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAccount(account.id)
+                        viewModel.deselectAccount()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.deselectAccount() }) { Text("Cancel") }
             }
         )
     }
@@ -189,7 +213,8 @@ fun AccountsScreen(
 fun AccountCard(
     account: Account, 
     onClick: () -> Unit,
-    onInvestClick: () -> Unit // NEW
+    onInvestClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     // This helper function converts the raw string from the API back to our enum
     val accountTypeEnum = AccountType.values().find { it.apiValue == account.accountType } ?: AccountType.BALANCED_FUND
@@ -233,6 +258,15 @@ fun AccountCard(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 }
+                IconButton(onClick = onDeleteClick) {
+                    Icon(
+                        Icons.Default.Delete, 
+                        contentDescription = "Delete Account",
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
                 Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
             }
             

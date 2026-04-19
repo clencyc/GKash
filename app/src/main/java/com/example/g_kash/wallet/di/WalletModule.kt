@@ -28,7 +28,8 @@ val walletModule = module {
             userId = userId,
             walletRepository = get(),
             balanceRepository = get(),
-            transactionRepository = get()
+            transactionRepository = get(),
+            accountsRepository = get()
         )
     }
 }

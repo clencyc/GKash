@@ -31,26 +31,25 @@ import org.koin.core.parameter.parametersOf
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletScreen(
-    // These navigation callbacks are perfect. Do not change them.
     onNavigateToTransactionHistory: () -> Unit,
     onNavigateToAccounts: () -> Unit,
     onNavigateToAccountDetails: (accountId: String) -> Unit,
     onNavigateToInvestment: () -> Unit = {},
-    onNavigateToBudgetSimulator: () -> Unit = {},
-    userId: String
+    onNavigateToBudgetSimulator: () -> Unit = {}
 ) {
-    // --- THIS IS THE FIX ---
-    // We inject the NEW WalletViewModel, passing the userId it needs.
-    // There is NO MORE AccountsViewModel here.
-    val viewModel: WalletViewModel = koinViewModel(
-        parameters = { parametersOf(userId) }
-    )
+    val viewModel: WalletViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
     // Load data when the screen is first composed
     LaunchedEffect(Unit) {
         viewModel.loadWalletData()
+    }
+    
+    // Refresh data whenever the user returns to this screen
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        viewModel.loadWalletData()
+        onPauseOrDispose { }
     }
 
     Scaffold(
@@ -79,11 +78,15 @@ fun WalletScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { viewModel.loadWalletData() }) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
+                    }
                     IconButton(onClick = { /* Notification click */ }) {
                         Icon(Icons.Default.Notifications, contentDescription = "Notifications")
-                    }
-                    IconButton(onClick = { /* Search click */ }) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -91,7 +94,7 @@ fun WalletScreen(
                 )
             )
         }
-    ) { padding ->
+        ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -99,6 +102,26 @@ fun WalletScreen(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp)
         ) {
+            // Error Display
+            uiState.error?.let { error ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { viewModel.loadWalletData() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Retry", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             
             // Wallet Balance Card with Invest button
@@ -181,12 +204,20 @@ fun WalletScreen(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Icon(
+                            Icons.Default.AccountBalanceWallet,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "No accounts yet",
                             style = MaterialTheme.typography.titleMedium,
@@ -194,11 +225,20 @@ fun WalletScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Create your first account to get started",
+                            text = "Create an account to start managing your funds and see your balance.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = onNavigateToAccounts,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Add Your First Account")
+                        }
                     }
                 }
             } else {

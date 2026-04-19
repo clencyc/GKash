@@ -37,9 +37,13 @@ fun getAccountTypeIcon(type: AccountType): ImageVector {
 fun getAccountTypeColor(type: AccountType): Color {
     val isDark = isSystemInDarkTheme()
     return when (type) {
-        AccountType.BALANCED_FUND -> if (isDark) Color(0xFF81C784) else Color(0xFF4CAF50)
-        AccountType.FIXED_INCOME_FUND -> if (isDark) Color(0xFF64B5F6) else Color(0xFF2196F3)
-        AccountType.MONEY_MARKET_FUND -> if (isDark) Color(0xFFFFD54F) else Color(0xFFFFC107)
-        AccountType.STOCK_MARKET -> if (isDark) Color(0xFFFF8A65) else Color(0xFFFF5722)
+        // Balanced Fund is now our signature Pink
+        AccountType.BALANCED_FUND -> if (isDark) Color(0xFFC11C84) else Color(0xFFE91E63)
+        // Fixed Income Fund is a professional Blue
+        AccountType.FIXED_INCOME_FUND -> if (isDark) Color(0xFF42A5F5) else Color(0xFF1976D2)
+        // Money Market Fund is a premium Gold/Amber
+        AccountType.MONEY_MARKET_FUND -> if (isDark) Color(0xFFFFB300) else Color(0xFFEFBF04)
+        // Stock Market is a bold Orange/Red
+        AccountType.STOCK_MARKET -> if (isDark) Color(0xFFFF7043) else Color(0xFFFF5722)
     }
 }

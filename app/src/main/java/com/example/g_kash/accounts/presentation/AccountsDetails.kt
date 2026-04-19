@@ -38,6 +38,11 @@ fun AccountDetailsScreen(
         }
     }
 
+    // Load fresh balance for this specific account
+    LaunchedEffect(accountId) {
+        viewModel.loadAccountBalance(accountId)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -136,8 +141,8 @@ fun AccountDetailsScreen(
                         Text("Current Balance", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f))
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            // The call to formatCurrency now unambiguously resolves to the function in AccountUIHelpers.kt
-                            text = formatCurrency(account.accountBalance),
+                            // Use the specific account balance if available, otherwise fallback to the one from the list
+                            text = formatCurrency(uiState.selectedAccountBalance ?: account.accountBalance),
                             style = MaterialTheme.typography.displaySmall,
                             color = Color.White,
                             fontWeight = FontWeight.Bold

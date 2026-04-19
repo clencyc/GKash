@@ -8,6 +8,10 @@ import com.example.g_kash.wallet.data.WalletRepository
 import com.example.g_kash.wallet.data.BalanceRepository
 import com.example.g_kash.transactions.data.Transaction
 import com.example.g_kash.transactions.domain.TransactionRepository
+import com.example.g_kash.accounts.domain.AccountsRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -17,7 +21,7 @@ import java.util.Locale
 
 // State holder for the Wallet Screen UI
 data class WalletUiState(
-    val totalBalance: Double = 1000.0,
+    val totalBalance: Double = 0.0,
     val accounts: List<Account> = emptyList(),
     val recentTransactions: List<Transaction> = emptyList(),
     val isLoading: Boolean = false,
@@ -28,16 +32,25 @@ class WalletViewModel(
     private val userId: String,
     private val walletRepository: WalletRepository,
     private val balanceRepository: BalanceRepository,
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val accountsRepository: AccountsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WalletUiState())
     val uiState = _uiState.asStateFlow()
 
     init {
+        // Collect shared balance directly from repository
         viewModelScope.launch {
-            balanceRepository.balance.collect { balance ->
+            accountsRepository.totalBalanceStream.collect { balance ->
                 _uiState.update { it.copy(totalBalance = balance) }
+            }
+        }
+
+        // Collect shared accounts directly from repository
+        viewModelScope.launch {
+            accountsRepository.accountsStream.collect { accounts ->
+                _uiState.update { it.copy(accounts = accounts) }
             }
         }
 
@@ -58,22 +71,13 @@ class WalletViewModel(
     fun loadWalletData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-
-            val accountsResult = walletRepository.getUserAccounts()
-            val balanceResult = walletRepository.getTotalBalance()
-
-            // Update state with real data or error
-            _uiState.update { currentState ->
-                currentState.copy(
-                    accounts = accountsResult.getOrElse { emptyList() },
-                    totalBalance = balanceResult.getOrElse { 0.0 },
-                    error = listOfNotNull(
-                        accountsResult.exceptionOrNull()?.message,
-                        balanceResult.exceptionOrNull()?.message
-                    ).joinToString("\n").takeIf { it.isNotEmpty() },
-                    isLoading = false
-                )
-            }
+            android.util.Log.d("WalletViewModel", "loadWalletData starting... User: $userId")
+            
+            // Trigger background refresh in repository
+            accountsRepository.refresh()
+            
+            // Artificial delay to show loading state if needed, or simply let collection handle it
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 
